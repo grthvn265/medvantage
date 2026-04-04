@@ -366,7 +366,17 @@ function requireCurrentRouteAccess(PDO $pdo): void
             exit;
         }
 
-        header('Location: ' . appUrl('/modules/dashboard/index.php?denied=1'));
+        $landingRoute = getLandingRouteForUser($pdo, $user);
+        $landingUrl = appUrl($landingRoute);
+
+        if (currentRequestPath() === $landingRoute) {
+            http_response_code(403);
+            echo 'Forbidden: You do not have access to this module.';
+            exit;
+        }
+
+        $separator = str_contains($landingUrl, '?') ? '&' : '?';
+        header('Location: ' . $landingUrl . $separator . 'denied=1');
         exit;
     }
 }
@@ -420,6 +430,20 @@ function getAccessibleModulesForUser(PDO $pdo, ?array $user): array
 function routePathToUrl(string $routePath): string
 {
     return appUrl($routePath);
+}
+
+function getLandingRouteForUser(PDO $pdo, ?array $user): string
+{
+    if ($user === null) {
+        return '/modules/auth/login.php';
+    }
+
+    $modules = getAccessibleModulesForUser($pdo, $user);
+    if (empty($modules)) {
+        return '/modules/auth/login.php';
+    }
+
+    return (string) $modules[0]['route_path'];
 }
 
 function consumeFlash(string $key): ?string
