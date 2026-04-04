@@ -2,7 +2,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="/finalprojectmanagement/assets/archive-styling.css" rel="stylesheet">
+<link href="<?= htmlspecialchars(appUrl('/assets/archive-styling.css')) ?>" rel="stylesheet">
 
 <style>
     /* Reset and Base Styles */
@@ -295,66 +295,51 @@
 <!-- Sidebar Overlay (Mobile) -->
 <div class="overlay" id="sidebarOverlay"></div>
 
+<?php
+$sidebarUser = isset($pdo) ? getCurrentUser($pdo) : null;
+$accessibleModules = isset($pdo) ? getAccessibleModulesForUser($pdo, $sidebarUser) : [];
+$currentModule = currentModuleKeyFromPath();
+?>
+
 <!-- Sidebar Component -->
 <div class="sidebar shadow-lg">
     <div>
         <!-- Logo and Title -->
         <div class="logo-title">
-            <img src="/finalprojectmanagement/components/logo.png" alt="MedVantage Logo">
+            <img src="<?= htmlspecialchars(appUrl('/components/logo.png')) ?>" alt="MedVantage Logo">
             <h2>MedVantage</h2>
         </div>
 
         <!-- Navigation Menu -->
         <ul class="nav flex-column">
             <?php
-                $currentPage = basename($_SERVER['PHP_SELF']);
-                $currentPath = $_SERVER['REQUEST_URI'];
-                $currentModule = '';
-
-                // Extract current module from path
-                $pathParts = explode('/', trim($currentPath, '/'));
-                if (in_array('modules', $pathParts)) {
-                    $modulesIndex = array_search('modules', $pathParts);
-                    if (isset($pathParts[$modulesIndex + 1])) {
-                        $nextPart = $pathParts[$modulesIndex + 1];
-                        $currentModule = ($nextPart === 'index.php' || $nextPart === 'dashboard') ? (($nextPart === 'index.php') ? 'index' : 'dashboard') : $nextPart;
-                    }
-                }
-
-                // Default navigation items
-                $navItems = [
-                    ['href' => '/medvantage/modules/dashboard/index.php', 'icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'file' => 'index.php', 'allowed' => true, 'module' => 'dashboard'],
-                    ['href' => '/medvantage/modules/patients/patients.php', 'icon' => 'bi-people', 'label' => 'Patients', 'file' => 'patients.php', 'allowed' => true, 'module' => 'patients'],
-                    ['href' => '/medvantage/modules/doctors/doctors.php', 'icon' => 'bi-person-badge', 'label' => 'Doctors', 'file' => 'doctors.php', 'allowed' => true, 'module' => 'doctors'],
-                    ['href' => '/medvantage/modules/appointments/appointment.php', 'icon' => 'bi-calendar-check', 'label' => 'Appointments', 'file' => 'appointment.php', 'allowed' => true, 'module' => 'appointments'],
-                    ['href' => '/medvantage/modules/billing/billing.php', 'icon' => 'bi-receipt', 'label' => 'Billing', 'file' => 'billing.php', 'allowed' => true, 'module' => 'billing'],
-                ];
-
-                // Render navigation items
-                foreach ($navItems as $item) {
-                    $isActive = (!empty($item['module'])) 
-                        ? ($currentModule === $item['module']) 
-                        : ($currentPage === $item['file']);
+                foreach ($accessibleModules as $module) {
+                    $isActive = ($currentModule === $module['module_key']);
                     ?>
                     <li class="nav-item">
-                        <?php if (!empty($item['allowed'])): ?>
-                            <a class="nav-link <?php echo $isActive ? 'active' : ''; ?>" 
-                               href="<?php echo htmlspecialchars($item['href']); ?>"
-                               title="<?php echo htmlspecialchars($item['label']); ?>">
-                                <i class="bi <?php echo htmlspecialchars($item['icon']); ?>"></i>
-                                <span class="nav-label"><?php echo htmlspecialchars($item['label']); ?></span>
-                            </a>
-                        <?php else: ?>
-                            <span class="nav-link locked" title="You do not have access to this module">
-                                <i class="bi bi-lock-fill"></i>
-                                <span class="nav-label"><?php echo htmlspecialchars($item['label']); ?></span>
-                            </span>
-                        <?php endif; ?>
+                        <a class="nav-link <?php echo $isActive ? 'active' : ''; ?>"
+                           href="<?php echo htmlspecialchars(routePathToUrl($module['route_path'])); ?>"
+                           title="<?php echo htmlspecialchars($module['module_label']); ?>">
+                            <i class="bi <?php echo htmlspecialchars($module['icon_class']); ?>"></i>
+                            <span class="nav-label"><?php echo htmlspecialchars($module['module_label']); ?></span>
+                        </a>
                     </li>
                     <?php
                 }
             ?>
         </ul>
+    </div>
+
+    <div class="sidebar-footer text-white">
+        <?php if ($sidebarUser): ?>
+            <div class="small mb-2 text-center">
+                <div class="fw-semibold"><?= htmlspecialchars($sidebarUser['full_name']) ?></div>
+                <div class="opacity-75"><?= htmlspecialchars($sidebarUser['role_name']) ?></div>
+            </div>
+        <?php endif; ?>
+        <a class="nav-link" href="<?= htmlspecialchars(appUrl('/modules/auth/logout.php')) ?>">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
     </div>
 </div>
 

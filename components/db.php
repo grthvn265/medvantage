@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/auth.php';
+
 $host = 'localhost';       
 $db   = 'medvantage_db';  
 $user = 'root';   
@@ -15,6 +17,7 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    requireCurrentRouteAccess($pdo);
 } catch (\PDOException $e) {
     exit('Connection failed: ' . $e->getMessage());
 }
