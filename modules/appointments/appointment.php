@@ -149,6 +149,12 @@ function timeSlots() {
             border-color: #dc3545;
             box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
         }
+        
+        #appointmentReason.is-invalid,
+        #appointmentReason.is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
     </style>
 </head>
 <body>
@@ -400,8 +406,12 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 </div>
 
 <div class="col-md-12">
-<label>Reason</label>
-<textarea name="reason" class="form-control"></textarea>
+<label>Reason (Max 100 characters)</label>
+<textarea id="appointmentReason" name="reason" class="form-control" maxlength="100" placeholder="Enter reason for appointment" oninput="validateAppointmentReason()" onkeyup="validateAppointmentReason()"></textarea>
+<div class="d-flex justify-content-between align-items-center">
+<small class="text-danger d-none" id="appointmentReasonError"></small>
+<small class="text-muted" id="reasonCharCount">0/100</small>
+</div>
 </div>
 
 <div class="col-md-12">
@@ -463,13 +473,14 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 
 <div class="col-md-6">
     <label class="form-label">Visit Date <span class="text-danger">*</span></label>
-    <input type="date" id="visitDate" name="visit_date" class="form-control" readonly required>
+    <input type="date" id="visitDate" class="form-control" disabled>
+    <input type="hidden" id="visitDateHidden" name="visit_date" required>
     <small class="text-danger d-none" data-error="visit_date"></small>
 </div>
 
 <div class="col-md-6">
     <label class="form-label">Visit Time (Hour) <span class="text-danger">*</span></label>
-    <select id="visitTime" name="visit_time" class="form-select" readonly required>
+    <select id="visitTime" class="form-select" disabled>
         <option value="">Select Hour</option>
         <option value="10">10:00 AM</option>
         <option value="11">11:00 AM</option>
@@ -481,6 +492,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
         <option value="17">5:00 PM</option>
         <option value="18">6:00 PM</option>
     </select>
+    <input type="hidden" id="visitTimeHidden" name="visit_time" required>
     <small class="text-danger d-none" data-error="visit_time"></small>
 </div>
 
@@ -699,6 +711,31 @@ function showTimeError(message) {
     elements.timeError.classList.add('show');
 }
 
+// Validate appointment reason
+function validateAppointmentReason() {
+    const reasonInput = document.getElementById('appointmentReason');
+    const errorElement = document.getElementById('appointmentReasonError');
+    const charCount = document.getElementById('reasonCharCount');
+    const text = reasonInput.value;
+
+    // Update character count
+    if (charCount) {
+        charCount.textContent = text.length + '/100';
+    }
+
+    // Check if exceeds max length
+    if (text.length > 100) {
+        errorElement.textContent = 'Reason must be 100 characters or less';
+        errorElement.classList.remove('d-none');
+        reasonInput.classList.add('is-invalid');
+        return false;
+    } else {
+        errorElement.classList.add('d-none');
+        reasonInput.classList.remove('is-invalid');
+        return true;
+    }
+}
+
 // Display loading/error states
 function showTimeLoadingState() {
     elements.appointmentTime.innerHTML = '<option value="">Loading times...</option>';
@@ -856,12 +893,39 @@ window.addEventListener('DOMContentLoaded', () => {
         if (form) form.reset();
         $('#patientSelect').val(null).trigger('change');
         clearErrors();
+        // Clear reason validation
+        const reasonInput = document.getElementById('appointmentReason');
+        if (reasonInput) {
+            reasonInput.classList.remove('is-invalid');
+            const errorElement = document.getElementById('appointmentReasonError');
+            if (errorElement) {
+                errorElement.classList.add('d-none');
+            }
+        }
     });
+    
+    // Update character count on appointment reason
+    const appointmentReasonInput = document.getElementById('appointmentReason');
+    if (appointmentReasonInput) {
+        appointmentReasonInput.addEventListener('input', function() {
+            const charCount = document.getElementById('reasonCharCount');
+            if (charCount) {
+                charCount.textContent = this.value.length + '/100';
+            }
+        });
+    }
 
     const reasonInput = document.getElementById('blockedReason');
     if (reasonInput) {
-        reasonInput.addEventListener('input', validateBlockedReason);
-        reasonInput.addEventListener('change', validateBlockedReason);
+        reasonInput.addEventListener('input', function() {
+            validateBlockedReason();
+        });
+        reasonInput.addEventListener('change', function() {
+            validateBlockedReason();
+        });
+        reasonInput.addEventListener('keyup', function() {
+            validateBlockedReason();
+        });
     }
 
     // show appointment modal when button clicked
@@ -912,7 +976,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <div class="col-md-6">
     <label>Reason (Optional)</label>
-    <input type="text" id="blockedReason" class="form-control" placeholder="e.g., Public Holiday, Maintenance">
+    <input type="text" id="blockedReason" class="form-control" placeholder="e.g., Public Holiday, Maintenance" oninput="validateBlockedReason()" onkeyup="validateBlockedReason()">
     <small class="text-danger d-none" id="blockedReasonError"></small>
 </div>
 
@@ -930,8 +994,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <div class="modal-footer">
-        <button type="button" class="btn btn-success" id="completeAppointmentBtn" onclick="completeAppointmentFromModal()">Complete</button>
-        <button type="button" class="btn btn-danger" id="cancelAppointmentBtn" onclick="cancelAppointmentFromModal()">Cancel</button>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 </div>
 
 </div>
@@ -999,28 +1062,24 @@ function validateBlockedReason() {
     const errorElement = document.getElementById('blockedReasonError');
     const text = reasonInput.value;
 
-    // clear prior
-    errorElement.classList.add('d-none');
-    reasonInput.classList.remove('is-invalid');
-
-    if (!text) {
-        return true; // optional field
-    }
-
-    if (text.length > 50) {
-        errorElement.textContent = 'Reason must be 50 characters or less';
+    // Always apply validation on input
+    if (text.length > 100) {
+        errorElement.textContent = 'Reason must be 100 characters or less (current: ' + text.length + ')';
         errorElement.classList.remove('d-none');
         reasonInput.classList.add('is-invalid');
         return false;
     }
 
-    if (/\d/.test(text)) {
+    if (text.length > 0 && /\d/.test(text)) {
         errorElement.textContent = 'Numbers are not allowed in reason';
         errorElement.classList.remove('d-none');
         reasonInput.classList.add('is-invalid');
         return false;
     }
 
+    // If no errors, clear styling
+    errorElement.classList.add('d-none');
+    reasonInput.classList.remove('is-invalid');
     return true;
 }
 
@@ -1148,6 +1207,21 @@ if (filterDiv && filterContainer) {
     const blockedModal = document.getElementById('blockedDatesModal');
     if (blockedModal) {
         blockedModal.addEventListener('show.bs.modal', function() {
+            // Attach event listeners when modal opens
+            const reasonInput = document.getElementById('blockedReason');
+            if (reasonInput) {
+                reasonInput.removeEventListener('input', validateBlockedReason);
+                reasonInput.removeEventListener('change', validateBlockedReason);
+                reasonInput.addEventListener('input', function() {
+                    validateBlockedReason();
+                });
+                reasonInput.addEventListener('change', function() {
+                    validateBlockedReason();
+                });
+                reasonInput.addEventListener('keyup', function() {
+                    validateBlockedReason();
+                });
+            }
             loadBlockedDates();
         });
     }
@@ -1193,8 +1267,12 @@ function openVisitModal(appointmentId, patientId, doctorId, appointmentDate, app
     document.getElementById('appointmentId').value = appointmentId;
     document.getElementById('patientId').value = patientId;
     document.getElementById('doctorId').value = doctorId;
+    
+    // Set and lock the date and time
     document.getElementById('visitDate').value = appointmentDate;
+    document.getElementById('visitDateHidden').value = appointmentDate;
     document.getElementById('visitTime').value = parseInt(appointmentTime.split(':')[0]);
+    document.getElementById('visitTimeHidden').value = parseInt(appointmentTime.split(':')[0]);
     
     // Show the visit modal
     const visitModal = new bootstrap.Modal(document.getElementById('visitModal'));

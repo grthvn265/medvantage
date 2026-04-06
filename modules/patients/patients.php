@@ -403,8 +403,24 @@ $(document).ready(function() {
             }
         }
 
+        // Sex validation
+        if (fieldName === 'sex') {
+            if (!value) {
+                errorMessage = 'Sex selection is required';
+                isValid = false;
+            }
+        }
+
+        // Address validation
+        if (fieldName === 'address') {
+            if (value && value.length > 200) {
+                errorMessage = 'Address must not exceed 200 characters';
+                isValid = false;
+            }
+        }
+
         // Patient contact number validation
-        if (fieldName === 'patient_number') {
+        if (fieldName === 'contact_number') {
             if (!value) {
                 errorMessage = 'Patient contact number is required';
                 isValid = false;
@@ -449,7 +465,7 @@ $(document).ready(function() {
         }
 
         // Email address validation (optional)
-        if (fieldName === 'email_address') {
+        if (fieldName === 'email') {
             if (value) {
                 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailPattern.test(value)) {
@@ -457,6 +473,20 @@ $(document).ready(function() {
                     isValid = false;
                 } else if (value.length > 100) {
                     errorMessage = 'Email address must not exceed 100 characters';
+                    isValid = false;
+                }
+            }
+        }
+
+        // Emergency email validation (optional)
+        if (fieldName === 'emergency_email') {
+            if (value) {
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(value)) {
+                    errorMessage = 'Emergency email must be in valid format';
+                    isValid = false;
+                } else if (value.length > 100) {
+                    errorMessage = 'Emergency email must not exceed 100 characters';
                     isValid = false;
                 }
             }
@@ -505,9 +535,9 @@ $(document).ready(function() {
 
     // Add real-time validation to form fields
     const form = document.getElementById('addPatientForm');
-    const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'suffix', 'date_of_birth', 'nationality', 'patient_number', 'email_address', 'emergency_contact_person', 'emergency_contact_number'];
+    const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'suffix', 'date_of_birth', 'sex', 'address', 'contact_number', 'email', 'emergency_contact_person', 'emergency_contact_number', 'emergency_email'];
     
-    const nameFields = ['last_name', 'first_name', 'emergency_contact_person', 'nationality'];
+    const nameFields = ['last_name', 'first_name', 'emergency_contact_person'];
     
     fieldsToValidate.forEach(fieldName => {
         const field = form.querySelector(`[name="${fieldName}"]`);

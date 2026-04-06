@@ -210,7 +210,7 @@ require '../../components/db.php';
 
         <!-- REPORTS HEADER -->
         <div class="bg-dark text-white p-3 mb-4" style="border-radius: 5px;">
-            <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Reports</h4>
+            <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Reports & Analytics</h4>
         </div>
 
         <!-- REPORT SECTION -->
@@ -218,23 +218,24 @@ require '../../components/db.php';
             <div class="card shadow-lg border-0">
                 <div class="card-header bg-gradient text-white" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph"></i> Reports & Analytics</h5>
-                            <select class="form-select" id="reportTypeSelect" style="width: 280px; background-color: rgba(255,255,255,0.9); padding: 10px 12px; font-size: 15px;" onchange="loadReport()">
-                                <option value="appointments">Appointment Analytics</option>
-                                <option value="billing">Billing Status</option>
-                                <option value="revenue">Revenue Analysis</option>
-                                <option value="doctors">Doctor Performance</option>
-                                <option value="visits">Visits Analytics</option>
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph"></i> Reports</h5>
+                            <select class="form-select" id="reportTypeSelect" style="width: 280px; background-color: rgba(255,255,255,0.9); padding: 10px 12px; font-size: 15px;" onchange="handleReportChange()">
                                 <option value="patients">Patients Report</option>
+                                <option value="doctors">Doctors Report</option>
+                                <option value="appointments">Appointments Report</option>
+                                <option value="billing">Billing Report</option>
+                                <option value="visits">Visits Report</option>
                             </select>
                         </div>
                         <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal" data-bs-target="#fieldSelectorModal" title="Select Fields">
+                                <i class="bi bi-sliders"></i> Configure Fields
                             </button>
-                            <button type="button" class="btn btn-light fw-bold" onclick="exportToPDF()" title="Export to PDF" style="padding: 10px 16px; font-size: 15px;">
+                            <button type="button" class="btn btn-light fw-bold" onclick="exportToPDF()" title="Export to PDF">
                                 <i class="bi bi-file-earmark-pdf"></i> PDF
                             </button>
-                            <button type="button" class="btn btn-light fw-bold" onclick="exportToCSV()" title="Export to CSV" style="padding: 10px 16px; font-size: 15px;">
+                            <button type="button" class="btn btn-light fw-bold" onclick="exportToCSV()" title="Export to CSV">
                                 <i class="bi bi-file-earmark-csv"></i> CSV
                             </button>
                         </div>
@@ -249,66 +250,23 @@ require '../../components/db.php';
                         </div>
                     </div>
 
-                    <!-- Charts Row -->
-                    <div id="chartsContainer" class="d-none">
-                        <div class="row g-4">
-                            <div class="col-lg-6">
-                                <div class="text-center mb-3">
-                                    <h6 class="fw-bold text-dark" id="mainChartTitle">Appointment Status</h6>
-                                </div>
-                                <div class="chart-container">
-                                    <canvas id="mainChart"></canvas>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="text-center mb-3">
-                                    <h6 class="fw-bold text-dark" id="secondaryChartTitle">Doctor Performance</h6>
-                                </div>
-                                <div class="chart-container">
-                                    <canvas id="secondaryChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <div class="row g-4">
-                            <div class="col-lg-12">
-                                <div class="text-center mb-3">
-                                    <h6 class="fw-bold text-dark">Key Metrics</h6>
-                                </div>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;" id="metricsContainer">
-                                    <!-- Metrics will be loaded here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Table Display -->
-                    <div id="tableContainer" class="d-none">
+                    <!-- Report Table -->
+                    <div id="tableContainer">
                         <div class="row g-4 mb-4">
                             <div class="col-lg-12">
                                 <div class="text-center mb-3">
                                     <h6 class="fw-bold text-dark">Key Metrics</h6>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;" id="tableMetricsContainer">
-                                    <!-- Table metrics will be loaded here -->
+                                    <!-- Metrics will be loaded here -->
                                 </div>
                             </div>
                         </div>
 
                         <div class="table-responsive">
                             <table id="reportTable" class="table table-striped table-hover table-bordered align-middle">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Patient ID</th>
-                                        <th>Name</th>
-                                        <th>Age</th>
-                                        <th>Gender</th>
-                                        <th>Contact</th>
-                                        <th>Email</th>
-                                        <th>Total Visits</th>
-                                    </tr>
+                                <thead class="table-dark" id="tableHeaders">
+                                    <!-- Headers will be generated dynamically -->
                                 </thead>
                                 <tbody id="tableBody">
                                     <!-- Table data will be loaded here -->
@@ -326,7 +284,36 @@ require '../../components/db.php';
     </div>
 </div>
 
-<!-- Scripts -->
+<!-- FIELD SELECTOR MODAL -->
+<div class="modal fade" id="fieldSelectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">Select Report Fields</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <p class="text-muted mb-3">Select which fields to include in the report and export:</p>
+                        <div id="fieldCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                            <!-- Field checkboxes will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="selectAllFields()">Select All</button>
+                <button type="button" class="btn btn-sm btn-warning" onclick="deselectAllFields()">Deselect All</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="loadReportData()">Apply & Generate Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -336,308 +323,268 @@ require '../../components/db.php';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
-    let mainChart = null;
-    let secondaryChart = null;
     let reportTable = null;
+    let currentReportData = null;
+    const fieldStorage = {};
 
-    async function loadReport() {
+    const fieldDefinitions = {
+        'patients': {
+            'patient_id': 'Patient ID',
+            'last_name': 'Last Name',
+            'first_name': 'First Name',
+            'middle_initial': 'Middle Initial',
+            'suffix': 'Suffix',
+            'date_of_birth': 'Date of Birth',
+            'age': 'Age',
+            'sex': 'Sex',
+            'address': 'Address',
+            'contact_number': 'Contact Number',
+            'email': 'Email',
+            'emergency_contact_person': 'Emergency Contact',
+            'emergency_contact_number': 'Emergency Number',
+            'emergency_email': 'Emergency Email',
+            'registered_date': 'Registered Date',
+            'total_visits': 'Total Visits',
+            'total_appointments': 'Total Appointments'
+        },
+        'doctors': {
+            'doctor_id': 'Doctor ID',
+            'last_name': 'Last Name',
+            'first_name': 'First Name',
+            'middle_initial': 'Middle Initial',
+            'suffix': 'Suffix',
+            'date_of_birth': 'Date of Birth',
+            'age': 'Age',
+            'sex': 'Sex',
+            'address': 'Address',
+            'contact_number': 'Contact Number',
+            'email': 'Email',
+            'emergency_contact_person': 'Emergency Contact',
+            'emergency_contact_number': 'Emergency Number',
+            'created_at': 'Registration Date',
+            'total_appointments': 'Total Appointments',
+            'completed_appointments': 'Completed Appointments'
+        },
+        'appointments': {
+            'appointment_id': 'Appointment ID',
+            'patient_name': 'Patient Name',
+            'doctor_name': 'Doctor Name',
+            'appointment_date': 'Appointment Date',
+            'appointment_time': 'Appointment Time',
+            'status': 'Status',
+            'reason': 'Reason',
+            'contact_number': 'Patient Contact',
+            'patient_email': 'Patient Email',
+            'created_at': 'Created Date'
+        },
+        'billing': {
+            'billing_id': 'Bill ID',
+            'invoice_id': 'Invoice ID',
+            'patient_name': 'Patient Name',
+            'doctor_name': 'Doctor Name',
+            'description': 'Description',
+            'amount': 'Amount',
+            'status': 'Status',
+            'invoice_date': 'Invoice Date',
+            'created_at': 'Created Date',
+            'updated_at': 'Updated Date'
+        },
+        'visits': {
+            'visit_id': 'Visit ID',
+            'patient_name': 'Patient Name',
+            'doctor_name': 'Doctor Name',
+            'visit_datetime': 'Visit Date & Time',
+            'nature_of_visit': 'Nature of Visit',
+            'affected_area': 'Affected Area',
+            'symptoms': 'Symptoms',
+            'observation': 'Observation',
+            'procedure_done': 'Procedure Done',
+            'meds_prescribed': 'Medications',
+            'instruction_to_patient': 'Instructions',
+            'remarks': 'Remarks'
+        }
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadReportData();
+    });
+
+    function handleReportChange() {
+        const type = document.getElementById('reportTypeSelect').value;
+        loadFieldSelector(type);
+        loadReportData();
+    }
+
+    function loadFieldSelector(type) {
+        const fields = fieldDefinitions[type] || {};
+        const container = document.getElementById('fieldCheckboxes');
+        container.innerHTML = '';
+
+        // Get stored selection or select first 5 fields by default
+        let selectedFields = fieldStorage[type] || Object.keys(fields).slice(0, 5);
+
+        Object.entries(fields).forEach(([key, label]) => {
+            const isChecked = selectedFields.includes(key);
+            const html = `
+                <div class="form-check">
+                    <input class="form-check-input field-checkbox" type="checkbox" id="field_${key}" value="${key}" ${isChecked ? 'checked' : ''}>
+                    <label class="form-check-label" for="field_${key}">
+                        ${label}
+                    </label>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function getSelectedFields() {
+        const checkboxes = document.querySelectorAll('.field-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function selectAllFields() {
+        document.querySelectorAll('.field-checkbox').forEach(cb => cb.checked = true);
+    }
+
+    function deselectAllFields() {
+        document.querySelectorAll('.field-checkbox').forEach(cb => cb.checked = false);
+    }
+
+    async function loadReportData() {
         const reportType = document.getElementById('reportTypeSelect').value;
-        
-        // Show loader
+        const selectedFields = getSelectedFields();
+
+        if (selectedFields.length === 0) {
+            alert('Please select at least one field');
+            return;
+        }
+
+        // Store selection
+        fieldStorage[reportType] = selectedFields;
+
         document.getElementById('reportLoader').classList.remove('d-none');
-        
+
         try {
-            const response = await fetch(`get_report_data.php?type=${reportType}`);
+            const fieldsParam = encodeURIComponent(JSON.stringify(selectedFields));
+            const response = await fetch(`reports.php?action=generate&type=${reportType}&fields=${fieldsParam}`);
             const data = await response.json();
-            
+
             if (data.error) {
                 alert('Error loading report: ' + data.error);
                 return;
             }
-            
-            // Destroy existing charts
-            if (mainChart) mainChart.destroy();
-            if (secondaryChart) secondaryChart.destroy();
-            if (reportTable) reportTable.destroy();
-            
-            // Check if this is a table-type report
-            if (data.type === 'table') {
-                displayTableReport(data);
-            } else {
-                displayChartReport(data);
-            }
-            
+
+            currentReportData = data;
+            displayTableReport(data);
+
         } catch (error) {
             console.error('Error loading report:', error);
             alert('Failed to load report data');
         } finally {
-            // Hide loader
             document.getElementById('reportLoader').classList.add('d-none');
         }
     }
 
-    function displayChartReport(data) {
-        // Hide table, show charts
-        document.getElementById('chartsContainer').classList.remove('d-none');
-        document.getElementById('tableContainer').classList.add('d-none');
-        
-        // Update chart titles
-        document.getElementById('mainChartTitle').textContent = data.mainChart.title || 'Main Chart';
-        document.getElementById('secondaryChartTitle').textContent = data.secondaryChart.title || 'Secondary Chart';
-        
-        // Create main chart
-        const mainCtx = document.getElementById('mainChart').getContext('2d');
-        mainChart = new Chart(mainCtx, createChartConfig(data.chartType, data.mainChart));
-        
-        // Create secondary chart
-        const secondaryCtx = document.getElementById('secondaryChart').getContext('2d');
-        const secondaryType = data.secondaryChart.type || 'bar';
-        secondaryChart = new Chart(secondaryCtx, createChartConfig(secondaryType, data.secondaryChart));
-        
-        // Update metrics
-        updateMetrics(data.keyMetrics);
-    }
-
     function displayTableReport(data) {
-        // Hide charts, show table
-        document.getElementById('chartsContainer').classList.add('d-none');
-        document.getElementById('tableContainer').classList.remove('d-none');
-        
-        // Update metrics
-        updateTableMetrics(data.keyMetrics);
-        
-        // Populate table
         const tbody = document.getElementById('tableBody');
+        const thead = document.getElementById('tableHeaders');
         tbody.innerHTML = '';
-        
-        data.data.forEach(patient => {
-            const row = `
-                <tr>
-                    <td><strong>#${patient.patient_id}</strong></td>
-                    <td>${patient.last_name}, ${patient.first_name}</td>
-                    <td><span class="badge bg-primary">${patient.age} yrs</span></td>
-                    <td>${patient.sex}</td>
-                    <td>${patient.patient_number || 'N/A'}</td>
-                    <td>${patient.email_address || 'N/A'}</td>
-                    <td><span class="badge bg-info">${patient.total_visits}</span></td>
-                </tr>
-            `;
-            tbody.innerHTML += row;
+        thead.innerHTML = '';
+
+        // Build headers
+        let headerRow = '<tr>';
+        data.fields.forEach(field => {
+            const label = fieldDefinitions[data.type][field] || field;
+            headerRow += `<th>${label}</th>`;
         });
-        
+        headerRow += '</tr>';
+        thead.innerHTML = headerRow;
+
+        // Build rows
+        data.data.forEach(row => {
+            let rowHtml = '<tr>';
+            data.fields.forEach(field => {
+                let value = row[field] || '';
+                // Format currency
+                if (field === 'amount' || field === 'due_date' || field === 'paid_date') {
+                    if (field === 'amount') {
+                        value = '₱' + (typeof value === 'number' ? value.toLocaleString('en-PH', {minimumFractionDigits: 2}) : value);
+                    }
+                }
+                rowHtml += `<td>${value}</td>`;
+            });
+            rowHtml += '</tr>';
+            tbody.innerHTML += rowHtml;
+        });
+
         // Initialize DataTable
         if (reportTable) reportTable.destroy();
         reportTable = $('#reportTable').DataTable({
             "pageLength": 10,
             "ordering": true,
             "searching": true,
-            "lengthChange": true
+            "paging": true,
+            "info": true,
+            "lengthChange": true,
+            "dom": '<"top"lf>rt<"bottom"ip><"clear">'
         });
+
+        // Update metrics
+        updateTableMetrics(data);
     }
 
-    function createChartConfig(chartType, chartData) {
-        const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 15,
-                        font: { size: 11, weight: 'bold' }
-                    }
-                }
-            }
+    function updateTableMetrics(data) {
+        const container = document.getElementById('tableMetricsContainer');
+        container.innerHTML = '';
+
+        const metrics = {
+            'Total Records': data.total_records,
+            'Report Type': data.title,
+            'Fields Selected': data.fields.length,
+            'Generate Date': new Date().toLocaleDateString('en-PH')
         };
 
-        if (chartType === 'doughnut') {
-            return {
-                type: 'doughnut',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        data: chartData.data,
-                        backgroundColor: chartData.backgroundColor || ['#0dcaf0', '#198754', '#dc3545'],
-                        borderColor: '#ffffff',
-                        borderWidth: 2
-                    }]
-                },
-                options: commonOptions
-            };
-        } else if (chartType === 'line') {
-            return {
-                type: 'line',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        label: chartData.label || 'Trend',
-                        data: chartData.data,
-                        borderColor: chartData.borderColor || '#667eea',
-                        backgroundColor: chartData.backgroundColor || 'rgba(102, 126, 234, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 5,
-                        pointBackgroundColor: chartData.borderColor || '#667eea',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    if (chartData.isCurrency) {
-                                        return '₱' + value.toLocaleString();
-                                    }
-                                    return value;
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-        } else if (chartType === 'bar') {
-            return {
-                type: 'bar',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        label: chartData.label || 'Count',
-                        data: chartData.data,
-                        backgroundColor: chartData.backgroundColor || '#764ba2',
-                        borderColor: '#667eea',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    indexAxis: chartData.indexAxis || 'x',
-                    scales: {
-                        x: {
-                            beginAtZero: true
-                        },
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            };
-        }
-    }
-
-    function updateMetrics(metrics) {
-        const metricsContainer = document.getElementById('metricsContainer');
-        metricsContainer.innerHTML = '';
-        
-        const colorMap = {
-            'text-primary': 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-            'text-success': 'linear-gradient(135deg, #28a74515 0%, #20c99715 100%)',
-            'text-info': 'linear-gradient(135deg, #0dcaf015 0%, #0099ff15 100%)',
-            'text-warning': 'linear-gradient(135deg, #ffc10715 0%, #ff952515 100%)',
-            'text-danger': 'linear-gradient(135deg, #dc354515 0%, #ff6b6b15 100%)'
-        };
-        
-        metrics.forEach(metric => {
-            const gradient = colorMap[metric.color] || colorMap['text-primary'];
-            const metricHtml = `
-                <div class="text-center p-3" style="background: ${gradient}; border-radius: 10px;">
-                    <h4 class="fw-bold ${metric.color} mb-1">${metric.value}</h4>
-                    <small class="text-muted">${metric.label}</small>
+        Object.entries(metrics).forEach(([label, value]) => {
+            const html = `
+                <div class="card text-center p-3 shadow-sm">
+                    <h6 class="text-muted mb-2">${label}</h6>
+                    <h3 class="fw-bold text-primary">${value}</h3>
                 </div>
             `;
-            metricsContainer.innerHTML += metricHtml;
+            container.innerHTML += html;
         });
-    }
-
-    function updateTableMetrics(metrics) {
-        const metricsContainer = document.getElementById('tableMetricsContainer');
-        metricsContainer.innerHTML = '';
-        
-        const colorMap = {
-            'text-primary': 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
-            'text-success': 'linear-gradient(135deg, #28a74515 0%, #20c99715 100%)',
-            'text-info': 'linear-gradient(135deg, #0dcaf015 0%, #0099ff15 100%)',
-            'text-warning': 'linear-gradient(135deg, #ffc10715 0%, #ff952515 100%)',
-            'text-danger': 'linear-gradient(135deg, #dc354515 0%, #ff6b6b15 100%)'
-        };
-        
-        metrics.forEach(metric => {
-            const gradient = colorMap[metric.color] || colorMap['text-primary'];
-            const metricHtml = `
-                <div class="text-center p-3" style="background: ${gradient}; border-radius: 10px;">
-                    <h4 class="fw-bold ${metric.color} mb-1">${metric.value}</h4>
-                    <small class="text-muted">${metric.label}</small>
-                </div>
-            `;
-            metricsContainer.innerHTML += metricHtml;
-        });
-    }
-
-    // Export Functions
-    function exportToExcel() {
-        const reportType = document.getElementById('reportTypeSelect').value;
-        const timestamp = new Date().toISOString().split('T')[0];
-        
-        if (reportType === 'patients') {
-            // Export patients table
-            const table = document.getElementById('reportTable');
-            const ws = XLSX.utils.table_to_sheet(table);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Patients");
-            XLSX.writeFile(wb, `${reportType}_Report_${timestamp}.xlsx`);
-        } else {
-            // Export metrics as structured data for chart reports
-            const metrics = [];
-            document.querySelectorAll('#metricsContainer > div').forEach(metric => {
-                const label = metric.querySelector('small').textContent;
-                const value = metric.querySelector('h4').textContent;
-                metrics.push({ 'Metric': label, 'Value': value });
-            });
-            
-            const ws = XLSX.utils.json_to_sheet(metrics);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Report");
-            XLSX.writeFile(wb, `${reportType}_Report_${timestamp}.xlsx`);
-        }
     }
 
     function exportToCSV() {
-        const reportType = document.getElementById('reportTypeSelect').value;
-        const timestamp = new Date().toISOString().split('T')[0];
-        
-        let csv = '';
-        
-        if (reportType === 'patients') {
-            csv = 'Patient ID,Name,Age,Gender,Contact,Email,Total Visits\n';
-            document.querySelectorAll('#reportTable tbody tr').forEach(row => {
-                const cells = row.querySelectorAll('td');
-                const patientId = cells[0].textContent.replace(/[#\s]/g, '');
-                const name = cells[1].textContent.replace(/"/g, '""');
-                const age = cells[2].textContent.replace(/[^\d]/g, '');
-                const gender = cells[3].textContent;
-                const contact = cells[4].textContent;
-                const email = cells[5].textContent;
-                const visits = cells[6].textContent.replace(/[^\d]/g, '');
-                csv += `"${patientId}","${name}","${age}","${gender}","${contact}","${email}","${visits}"\n`;
-            });
-        } else {
-            csv = 'Report Type,Metric,Value\n';
-            document.querySelectorAll('#metricsContainer > div').forEach(metric => {
-                const label = metric.querySelector('small').textContent;
-                const value = metric.querySelector('h4').textContent;
-                csv += `"${reportType}","${label}","${value}"\n`;
-            });
+        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
+            alert('No data to export. Generate a report first.');
+            return;
         }
-        
+
+        const data = currentReportData.data;
+        const fields = currentReportData.fields;
+        const fieldLabels = fields.map(f => fieldDefinitions[currentReportData.type][f] || f);
+
+        // Build CSV
+        let csv = fieldLabels.join(',') + '\n';
+        data.forEach(row => {
+            const values = fields.map(field => {
+                let value = row[field] || '';
+                if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                    value = '"' + value.replace(/"/g, '""') + '"';
+                }
+                return value;
+            });
+            csv += values.join(',') + '\n';
+        });
+
+        // Download
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
+        const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `${reportType}_Report_${timestamp}.csv`);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${currentReportData.type}_report_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -645,31 +592,22 @@ require '../../components/db.php';
     }
 
     function exportToPDF() {
-        const reportType = document.getElementById('reportTypeSelect').value;
-        const timestamp = new Date().toISOString().split('T')[0];
-        
-        let element;
-        if (reportType === 'patients') {
-            element = document.getElementById('tableContainer');
-        } else {
-            element = document.getElementById('chartsContainer');
+        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
+            alert('No data to export. Generate a report first.');
+            return;
         }
-        
+
+        const element = document.getElementById('reportTable');
         const opt = {
             margin: 10,
-            filename: `${reportType}_Report_${timestamp}.pdf`,
+            filename: `${currentReportData.type}_report_${new Date().toISOString().split('T')[0]}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            html2canvas: { scale: 2 },
+            jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
-        
+
         html2pdf().set(opt).from(element).save();
     }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        loadReport(); // Load default report
-    });
 </script>
 
 </body>

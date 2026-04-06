@@ -371,37 +371,150 @@ $(document).ready(function() {
         let isValid = true;
         let errorMessage = '';
 
-        // Helper functions
-        function validateNameField(name, minLength = 2) {
-            if (name.length < minLength) {
-                return { valid: false, message: `Minimum ${minLength} characters required` };
+        // Last name validation
+        if (fieldName === 'last_name') {
+            if (!value) {
+                errorMessage = 'Last name is required';
+                isValid = false;
+            } else if (value.length < 2) {
+                errorMessage = 'Last name must be at least 2 characters';
+                isValid = false;
+            } else if (!/^[a-zA-Z\s'-]+$/.test(value)) {
+                errorMessage = 'Only letters, spaces, hyphens, and apostrophes allowed';
+                isValid = false;
             }
-            if (!/^[a-zA-Z\s\'-]+$/.test(name)) {
-                return { valid: false, message: 'Only letters, spaces, hyphens, and apostrophes allowed' };
-            }
-            return { valid: true, message: '' };
         }
 
-        // Validation rules
-        if (fieldName === 'last_name' || fieldName === 'first_name') {
-            const result = validateNameField(value);
-            isValid = result.valid;
-            errorMessage = result.message;
-        } else if (fieldName === 'middle_initial') {
+        // First name validation
+        if (fieldName === 'first_name') {
+            if (!value) {
+                errorMessage = 'First name is required';
+                isValid = false;
+            } else if (value.length < 2) {
+                errorMessage = 'First name must be at least 2 characters';
+                isValid = false;
+            } else if (!/^[a-zA-Z\s'-]+$/.test(value)) {
+                errorMessage = 'Only letters, spaces, hyphens, and apostrophes allowed';
+                isValid = false;
+            }
+        }
+
+        // Middle initial validation
+        if (fieldName === 'middle_initial') {
             if (value && !/^[a-zA-Z]$/.test(value)) {
+                errorMessage = 'Middle initial must be a single letter';
                 isValid = false;
-                errorMessage = 'Must be a single letter';
             }
-        } else if (fieldName === 'suffix') {
-            const validSuffixes = ['', 'Sr.', 'Jr.', 'I', 'II', 'III', 'IV', 'V'];
-            if (value && !validSuffixes.includes(value)) {
+        }
+
+        // Suffix validation
+        if (fieldName === 'suffix') {
+            if (value) {
+                const validSuffixes = ['Sr.', 'Jr.', 'I', 'II', 'III', 'IV', 'V'];
+                if (!validSuffixes.includes(value)) {
+                    errorMessage = 'Please select a valid suffix';
+                    isValid = false;
+                }
+            }
+        }
+
+        // Date of birth validation
+        if (fieldName === 'date_of_birth') {
+            if (value) {
+                const dob = new Date(value);
+                const today = new Date();
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                
+                if (dob > today) {
+                    errorMessage = 'Date of birth cannot be in the future';
+                    isValid = false;
+                } else if (age < 18) {
+                    errorMessage = 'Doctor must be at least 18 years old';
+                    isValid = false;
+                } else if (age > 100) {
+                    errorMessage = 'Please enter a valid date of birth';
+                    isValid = false;
+                }
+            }
+        }
+
+        // Sex validation
+        if (fieldName === 'sex') {
+            if (!value) {
+                errorMessage = 'Sex selection is required';
                 isValid = false;
-                errorMessage = 'Invalid suffix selection';
             }
-        } else if (fieldName === 'contact_number') {
+        }
+
+        // Address validation
+        if (fieldName === 'address') {
+            if (value && value.length > 200) {
+                errorMessage = 'Address must not exceed 200 characters';
+                isValid = false;
+            }
+        }
+
+        // Contact number validation
+        if (fieldName === 'contact_number') {
+            if (!value) {
+                errorMessage = 'Doctor contact number is required';
+                isValid = false;
+            } else if (!/^09\d{9}$/.test(value.replace(/\D/g, ''))) {
+                errorMessage = 'Must be 11 digits starting with 09';
+                isValid = false;
+            }
+        }
+
+        // Email validation
+        if (fieldName === 'email') {
+            if (value) {
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(value)) {
+                    errorMessage = 'Please enter a valid email address';
+                    isValid = false;
+                } else if (value.length > 100) {
+                    errorMessage = 'Email must not exceed 100 characters';
+                    isValid = false;
+                }
+            }
+        }
+
+        // Emergency contact person validation
+        if (fieldName === 'emergency_contact_person') {
+            if (value) {
+                if (!/^[a-zA-Z\s'-]+$/.test(value)) {
+                    errorMessage = 'Only letters, spaces, hyphens, and apostrophes allowed';
+                    isValid = false;
+                } else if (value.length > 100) {
+                    errorMessage = 'Emergency contact person must not exceed 100 characters';
+                    isValid = false;
+                }
+            }
+        }
+
+        // Emergency contact number validation
+        if (fieldName === 'emergency_contact_number') {
             if (value && !/^09\d{9}$/.test(value.replace(/\D/g, ''))) {
+                errorMessage = 'Must be 11 digits starting with 09';
                 isValid = false;
-                errorMessage = 'Must be 11 digits starting with 09 (e.g., 09123456789)';
+            }
+        }
+
+        // Emergency email validation
+        if (fieldName === 'emergency_email') {
+            if (value) {
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(value)) {
+                    errorMessage = 'Emergency email must be in valid format';
+                    isValid = false;
+                } else if (value.length > 100) {
+                    errorMessage = 'Emergency email must not exceed 100 characters';
+                    isValid = false;
+                }
             }
         }
 
@@ -432,8 +545,8 @@ $(document).ready(function() {
 
     // Add real-time validation and formatting to form fields
     const form = document.getElementById('addDoctorForm');
-    const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'contact_number'];
-    const nameFields = ['last_name', 'first_name'];
+    const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'suffix', 'date_of_birth', 'sex', 'address', 'contact_number', 'email', 'emergency_contact_person', 'emergency_contact_number', 'emergency_email'];
+    const nameFields = ['last_name', 'first_name', 'emergency_contact_person'];
 
     // Apply real-time validation to all fields
     fieldsToValidate.forEach(fieldName => {
