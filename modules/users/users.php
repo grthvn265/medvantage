@@ -180,6 +180,7 @@ $flashError = consumeFlash('flash_error');
                             <label class="form-label">Email <span class="text-danger">*</span></label>
                             <input type="email" name="email" class="form-control" maxlength="150" required>
                             <small class="text-danger d-none" data-error="email"></small>
+                            <small class="d-none" id="emailAvailabilityStatus"></small>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Username <span class="text-danger">*</span></label>
@@ -320,6 +321,59 @@ $flashError = consumeFlash('flash_error');
             return true;
         }
 
+        function setEmailAvailabilityStatus(message, statusClass) {
+            const statusEl = $('#emailAvailabilityStatus');
+            statusEl.removeClass('d-none text-success text-danger text-muted');
+            statusEl.addClass(statusClass || 'text-muted');
+            statusEl.text(message || '');
+
+            if (!message) {
+                statusEl.addClass('d-none');
+            }
+        }
+
+        async function checkEmailAvailability() {
+            const email = ($('[name="email"]').val() || '').trim();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!emailPattern.test(email) || email.length > 150) {
+                setEmailAvailabilityStatus('', '');
+                return false;
+            }
+
+            setEmailAvailabilityStatus('Checking email availability.....', 'text-muted');
+
+            try {
+                const response = await fetch('check_email_availability.php?email=' + encodeURIComponent(email), {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    setEmailAvailabilityStatus(data.message || 'Unable to validate email availability.', 'text-danger');
+                    setFieldError('email', data.message || 'Unable to validate email availability.');
+                    return false;
+                }
+
+                if (!data.available) {
+                    setEmailAvailabilityStatus(data.message || 'Email is already in use.', 'text-danger');
+                    setFieldError('email', data.message || 'Email is already in use.');
+                    return false;
+                }
+
+                clearFieldError('email');
+                setEmailAvailabilityStatus(data.message || 'Email is available.', 'text-success');
+                return true;
+            } catch (error) {
+                setEmailAvailabilityStatus('Unable to validate email availability.', 'text-danger');
+                setFieldError('email', 'Unable to validate email availability.');
+                return false;
+            }
+        }
+
         function validateModuleChecklist() {
             if ($('input[name="module_ids[]"]:checked').length === 0) {
                 $('#moduleChecklistError').text('Select at least one module for this account.').removeClass('d-none');
@@ -366,10 +420,38 @@ $flashError = consumeFlash('flash_error');
             });
         }
 
-        $('#createUserForm').on('submit', function (event) {
-            if (!validateCreateAccountForm()) {
-                event.preventDefault();
+        let allowFormSubmit = false;
+
+        $('#createUserForm').on('submit', async function (event) {
+            if (allowFormSubmit) {
+                return true;
             }
+
+            event.preventDefault();
+
+            if (!validateCreateAccountForm()) {
+                return;
+            }
+
+            const isEmailAvailable = await checkEmailAvailability();
+            if (!isEmailAvailable) {
+                return;
+            }
+
+            allowFormSubmit = true;
+            this.submit();
+        });
+
+        $('[name="email"]').on('blur', async function () {
+            if (validateField('email')) {
+                await checkEmailAvailability();
+            } else {
+                setEmailAvailabilityStatus('', '');
+            }
+        });
+
+        $('[name="email"]').on('input', function () {
+            setEmailAvailabilityStatus('', '');
         });
 
         $('#createUserForm input, #createUserForm select').on('input change blur', function () {

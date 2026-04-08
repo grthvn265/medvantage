@@ -67,6 +67,14 @@ if (count($moduleIds) === 0) {
     exit;
 }
 
+$existingEmailStmt = $pdo->prepare('SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1');
+$existingEmailStmt->execute([$email]);
+if ($existingEmailStmt->fetchColumn()) {
+    setFlash('flash_error', 'Email already exists. Please use a different email address.');
+    header('Location: users.php');
+    exit;
+}
+
 $validModulesStmt = $pdo->query("SELECT module_id FROM app_modules WHERE is_enabled = 1 AND module_key <> 'users'");
 $validModuleIds = array_map('intval', array_column($validModulesStmt->fetchAll(PDO::FETCH_ASSOC), 'module_id'));
 $validLookup = array_fill_keys($validModuleIds, true);
