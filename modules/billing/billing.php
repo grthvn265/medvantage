@@ -273,7 +273,8 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll
                 </a>
                 <?php else: ?>
                 <a href="billing_archive_handler.php?action=restore&id=<?= $bill['billing_id'] ?>" 
-                   class="btn btn-info btn-sm">
+                   class="btn btn-info btn-sm"
+                   onclick="return confirm('Are you sure you want to restore this billing record?');">
                    Restore
                 </a>
                 <a href="billing_archive_handler.php?action=permanently_delete&id=<?= $bill['billing_id'] ?>" 

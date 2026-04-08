@@ -323,7 +323,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#viewAppointmentModal" onclick="loadAppointmentDetails(<?= $a['appointment_id'] ?>, <?= $a['patient_id'] ?>, <?= $a['doctor_id'] ?>, '<?= $a['appointment_date'] ?>', '<?= $a['appointment_time'] ?>', '<?= $a['status'] ?>')">View</button>
 <a href="appointment_archive_handler.php?action=archive&id=<?= $a['appointment_id'] ?>" class="btn btn-secondary btn-sm" onclick="return confirm('Archive this appointment?');">Archive</a>
 <?php else: ?>
-<a href="appointment_archive_handler.php?action=restore&id=<?= $a['appointment_id'] ?>" class="btn btn-info btn-sm">Restore</a>
+<a href="appointment_archive_handler.php?action=restore&id=<?= $a['appointment_id'] ?>" class="btn btn-info btn-sm" onclick="return confirm('Are you sure you want to restore this appointment?');">Restore</a>
 <a href="appointment_archive_handler.php?action=permanently_delete&id=<?= $a['appointment_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete? This cannot be undone.');">Delete</a>
 <?php endif; ?>
 </td>

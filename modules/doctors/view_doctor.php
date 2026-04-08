@@ -413,7 +413,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     age--;
                 }
                 
-                if (dob > today) {
+                if (dob.getFullYear() < 1920) {
+                    errorMessage = 'Date of birth cannot be before 1920';
+                    isValid = false;
+                } else if (dob > today) {
                     errorMessage = 'Date of birth cannot be in the future';
                     isValid = false;
                 } else if (age < 18) {
@@ -529,6 +532,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add real-time validation and formatting to edit form fields
     const form = document.getElementById('editDoctorForm');
+    
+    // Set max date for DOB input to today and min date to 1920-01-01
+    const today = new Date().toISOString().split('T')[0];
+    const minDate = '1920-01-01';
+    const editDobInput = form.querySelector('[name="date_of_birth"]');
+    if (editDobInput) {
+        editDobInput.setAttribute('max', today);
+        editDobInput.setAttribute('min', minDate);
+    }
+    
     const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'suffix', 'date_of_birth', 'sex', 'address', 'contact_number', 'email', 'emergency_contact_person', 'emergency_contact_number', 'emergency_email'];
     const nameFields = ['last_name', 'first_name', 'emergency_contact_person'];
 

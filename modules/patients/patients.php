@@ -159,7 +159,8 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </a>
                                 <?php else: ?>
                                 <a href="patient_archive_handler.php?action=restore&id=<?= $row['patient_id'] ?>" 
-                                   class="btn btn-info btn-sm">
+                                   class="btn btn-info btn-sm"
+                                   onclick="return confirm('Are you sure you want to restore this patient?');">
                                    Restore
                                 </a>
                                 <a href="patient_archive_handler.php?action=permanently_delete&id=<?= $row['patient_id'] ?>" 
@@ -322,9 +323,12 @@ $(document).ready(function() {
         ]
     });
 
-    // Set max date for DOB input to today
+    // Set max date for DOB input to today and min date to 1920-01-01
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('dobInput').setAttribute('max', today);
+    const minDate = '1920-01-01';
+    const dobInput = document.getElementById('dobInput');
+    dobInput.setAttribute('max', today);
+    dobInput.setAttribute('min', minDate);
 
     // Format name field - capitalize each word when there are spaces
     function formatNameField(value) {
@@ -390,7 +394,10 @@ $(document).ready(function() {
                     age--;
                 }
                 
-                if (dob > today) {
+                if (dob.getFullYear() < 1920) {
+                    errorMessage = 'Date of birth cannot be before 1920';
+                    isValid = false;
+                } else if (dob > today) {
                     errorMessage = 'Date of birth cannot be in the future';
                     isValid = false;
                 } else if (age === 0) {

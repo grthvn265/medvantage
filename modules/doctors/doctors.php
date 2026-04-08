@@ -147,7 +147,8 @@ $doctors = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </a>
         <?php else: ?>
         <a href="doctor_archive_handler.php?action=restore&id=<?= $doctor['doctor_id'] ?>" 
-           class="btn btn-info btn-sm">
+           class="btn btn-info btn-sm"
+           onclick="return confirm('Are you sure you want to restore this doctor?');">
            Restore
         </a>
         <a href="doctor_archive_handler.php?action=permanently_delete&id=<?= $doctor['doctor_id'] ?>" 
@@ -429,7 +430,10 @@ $(document).ready(function() {
                     age--;
                 }
                 
-                if (dob > today) {
+                if (dob.getFullYear() < 1920) {
+                    errorMessage = 'Date of birth cannot be before 1920';
+                    isValid = false;
+                } else if (dob > today) {
                     errorMessage = 'Date of birth cannot be in the future';
                     isValid = false;
                 } else if (age < 18) {
@@ -545,6 +549,16 @@ $(document).ready(function() {
 
     // Add real-time validation and formatting to form fields
     const form = document.getElementById('addDoctorForm');
+    
+    // Set max date for DOB input to today and min date to 1920-01-01
+    const today = new Date().toISOString().split('T')[0];
+    const minDate = '1920-01-01';
+    const dobInput = form.querySelector('[name="date_of_birth"]');
+    if (dobInput) {
+        dobInput.setAttribute('max', today);
+        dobInput.setAttribute('min', minDate);
+    }
+    
     const fieldsToValidate = ['last_name', 'first_name', 'middle_initial', 'suffix', 'date_of_birth', 'sex', 'address', 'contact_number', 'email', 'emergency_contact_person', 'emergency_contact_number', 'emergency_email'];
     const nameFields = ['last_name', 'first_name', 'emergency_contact_person'];
 

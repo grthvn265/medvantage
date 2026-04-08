@@ -301,11 +301,13 @@ $age = $today->diff($dob)->y;
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Set max date for DOB input to today
+    // Set max date for DOB input to today and min date to 1920-01-01
     const today = new Date().toISOString().split('T')[0];
+    const minDate = '1920-01-01';
     const editDobInput = document.getElementById('editDobInput');
     if (editDobInput) {
         editDobInput.setAttribute('max', today);
+        editDobInput.setAttribute('min', minDate);
     }
 
     // Format name field - capitalize each word when there are spaces
@@ -372,7 +374,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     age--;
                 }
                 
-                if (dob > today) {
+                if (dob.getFullYear() < 1920) {
+                    errorMessage = 'Date of birth cannot be before 1920';
+                    isValid = false;
+                } else if (dob > today) {
                     errorMessage = 'Date of birth cannot be in the future';
                     isValid = false;
                 } else if (age === 0) {

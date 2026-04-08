@@ -37,6 +37,9 @@ function validateDateOfBirth($dob) {
     $date = DateTime::createFromFormat('Y-m-d', $dob);
     if (!$date || $date->format('Y-m-d') !== $dob) return false;
     
+    // Check year is 1920 or later
+    if ((int)$date->format('Y') < 1920) return false;
+    
     // Check if date doesn't exceed today
     $today = new DateTime();
     if ($date > $today) return false;
@@ -147,13 +150,6 @@ if (!empty($address)) {
 if (!empty($contact_number)) {
     if (!validatePhoneNumber($contact_number)) {
         $errors['contact_number'] = "Contact number must be exactly 11 digits starting with 09";
-    } else {
-        // Check for duplicate only if format is valid (exclude current doctor)
-        $check = $pdo->prepare("SELECT doctor_id FROM doctors WHERE contact_number = ? AND doctor_id != ?");
-        $check->execute([preg_replace('/\D/', '', $contact_number), $doctor_id]);
-        if ($check->rowCount() > 0) {
-            $errors['contact_number'] = "Contact number already exists";
-        }
     }
 }
 
