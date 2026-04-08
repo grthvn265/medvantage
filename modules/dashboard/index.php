@@ -865,6 +865,24 @@ $reportSystemName = 'MedVantage';
         `;
     }
 
+    function waitForImages(container) {
+        const images = Array.from(container.querySelectorAll('img'));
+
+        if (images.length === 0) {
+            return Promise.resolve();
+        }
+
+        return Promise.all(images.map(image => new Promise(resolve => {
+            if (image.complete) {
+                resolve();
+                return;
+            }
+
+            image.addEventListener('load', resolve, { once: true });
+            image.addEventListener('error', resolve, { once: true });
+        })));
+    }
+
     function buildReportDocumentMarkup() {
         const generatedAt = getReportTimestamp();
 
@@ -1102,28 +1120,63 @@ $reportSystemName = 'MedVantage';
             return;
         }
 
-        const element = document.createElement('div');
-        element.style.position = 'fixed';
-        element.style.left = '-9999px';
-        element.style.top = '0';
-        element.style.width = '1120px';
-        element.innerHTML = `${getReportDocumentStyles()}${buildReportDocumentMarkup()}`;
-        document.body.appendChild(element);
+        const exportStyle = document.createElement('style');
+        exportStyle.textContent = getReportDocumentStyles()
+            .replace('<style>', '')
+            .replace('</style>', '');
+        document.head.appendChild(exportStyle);
+
+        const exportHost = document.createElement('div');
+        exportHost.style.position = 'absolute';
+        exportHost.style.top = '0';
+        exportHost.style.left = '0';
+        exportHost.style.width = '1120px';
+        exportHost.style.padding = '0';
+        exportHost.style.margin = '0';
+        exportHost.style.opacity = '0.01';
+        exportHost.style.pointerEvents = 'none';
+        exportHost.style.zIndex = '-1';
+        exportHost.style.background = '#ffffff';
+        exportHost.innerHTML = buildReportDocumentMarkup();
+        document.body.appendChild(exportHost);
+
+        const reportDocument = exportHost.querySelector('.report-document');
+
+        if (!reportDocument) {
+            document.body.removeChild(exportHost);
+            document.head.removeChild(exportStyle);
+            alert('Failed to prepare the report for PDF export.');
+            return;
+        }
 
         const opt = {
             margin: 10,
             filename: getReportFilename('pdf'),
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: 1120
+            },
             jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
 
-        html2pdf().set(opt).from(element).save().then(() => {
-            document.body.removeChild(element);
-        }).catch(() => {
-            document.body.removeChild(element);
-            alert('Failed to export the report as PDF.');
-        });
+        waitForImages(reportDocument)
+            .then(() => new Promise(resolve => requestAnimationFrame(() => resolve())))
+            .then(() => html2pdf().set(opt).from(reportDocument).save())
+            .then(() => {
+                document.body.removeChild(exportHost);
+                document.head.removeChild(exportStyle);
+            })
+            .catch(error => {
+                console.error('PDF export failed:', error);
+                document.body.removeChild(exportHost);
+                document.head.removeChild(exportStyle);
+                alert('Failed to export the report as PDF.');
+            });
     }
 </script>
 
