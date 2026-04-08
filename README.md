@@ -16,6 +16,4 @@ Import medvantage_db.sql to PHPMyAdmin
 Login Credentials (Default)
 
 Username: Owner 
-
 Password: Owner@12345 
-
