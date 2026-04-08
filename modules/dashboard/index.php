@@ -1129,8 +1129,7 @@ $reportSystemName = 'MedVantage';
         const exportHost = document.createElement('div');
         exportHost.style.position = 'fixed';
         exportHost.style.top = '0';
-        exportHost.style.left = '50%';
-        exportHost.style.transform = 'translateX(-50%)';
+        exportHost.style.left = '0';
         exportHost.style.width = '1120px';
         exportHost.style.padding = '0';
         exportHost.style.margin = '0';
@@ -1152,6 +1151,8 @@ $reportSystemName = 'MedVantage';
         reportDocument.style.opacity = '1';
         reportDocument.style.visibility = 'visible';
         reportDocument.style.background = '#ffffff';
+        reportDocument.style.width = '1120px';
+        reportDocument.style.margin = '0';
 
         const opt = {
             margin: 10,
