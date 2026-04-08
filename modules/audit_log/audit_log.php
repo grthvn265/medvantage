@@ -102,7 +102,6 @@ function actionBadge(string $action, array $map): string
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <style>
         .badge.bg-teal { background-color: #0d6efd; }
-        .filter-bar { background: #f8f9fa; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; }
         #auditTable td { font-size: 13px; vertical-align: middle; }
         .module-pill {
             display: inline-block;
@@ -126,57 +125,60 @@ function actionBadge(string $action, array $map): string
             <h4 class="mb-0 fw-bold">Audit Log</h4>
         </div>
 
-        <!-- Filters -->
-        <form method="GET" class="filter-bar row g-2 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Module</label>
-                <select name="module" class="form-select form-select-sm">
-                    <option value="">All Modules</option>
-                    <?php foreach ($moduleOptions as $m): ?>
-                        <option value="<?= htmlspecialchars($m) ?>"<?= $filterModule === $m ? ' selected' : '' ?>>
-                            <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $m))) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Action</label>
-                <select name="action" class="form-select form-select-sm">
-                    <option value="">All Actions</option>
-                    <?php foreach ($actionOptions as $a): ?>
-                        <option value="<?= htmlspecialchars($a) ?>"<?= $filterAction === $a ? ' selected' : '' ?>>
-                            <?= htmlspecialchars($a) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold mb-1">User</label>
-                <select name="user_id" class="form-select form-select-sm">
-                    <option value="0">All Users</option>
-                    <?php foreach ($userOptions as $u): ?>
-                        <option value="<?= (int) $u['user_id'] ?>"<?= $filterUser === (int) $u['user_id'] ? ' selected' : '' ?>>
-                            <?= htmlspecialchars($u['full_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Date</label>
-                <input type="date" name="date" class="form-control form-control-sm"
-                       value="<?= htmlspecialchars($filterDate) ?>">
-            </div>
-            <div class="col-md-1">
-                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
-            </div>
-            <div class="col-md-1">
-                <a href="audit_log.php" class="btn btn-sm btn-outline-secondary w-100">Reset</a>
-            </div>
-        </form>
-
         <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table id="auditTable" class="table table-sm table-hover mb-0 w-100">
+            <div class="card-body">
+
+                <!-- FILTERS -->
+                <div id="filterContainer" class="mb-3">
+                <form method="GET" class="row g-2">
+                    <div class="col-md-auto">
+                        <label class="form-label small fw-semibold mb-1">Module</label>
+                        <select name="module" class="form-select form-select-sm">
+                            <option value="">All Modules</option>
+                            <?php foreach ($moduleOptions as $m): ?>
+                                <option value="<?= htmlspecialchars($m) ?>"<?= $filterModule === $m ? ' selected' : '' ?>>
+                                    <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $m))) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-auto">
+                        <label class="form-label small fw-semibold mb-1">Action</label>
+                        <select name="action" class="form-select form-select-sm">
+                            <option value="">All Actions</option>
+                            <?php foreach ($actionOptions as $a): ?>
+                                <option value="<?= htmlspecialchars($a) ?>"<?= $filterAction === $a ? ' selected' : '' ?>>
+                                    <?= htmlspecialchars($a) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-auto">
+                        <label class="form-label small fw-semibold mb-1">User</label>
+                        <select name="user_id" class="form-select form-select-sm">
+                            <option value="0">All Users</option>
+                            <?php foreach ($userOptions as $u): ?>
+                                <option value="<?= (int) $u['user_id'] ?>"<?= $filterUser === (int) $u['user_id'] ? ' selected' : '' ?>>
+                                    <?= htmlspecialchars($u['full_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-auto">
+                        <label class="form-label small fw-semibold mb-1">Date</label>
+                        <input type="date" name="date" class="form-control form-control-sm"
+                               value="<?= htmlspecialchars($filterDate) ?>">
+                    </div>
+                    <div class="col-md-auto d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-primary" style="display:none;">Filter</button>
+                    </div>
+                    <div class="col-md-auto d-flex align-items-end">
+                        <a href="audit_log.php" class="btn btn-sm btn-outline-secondary">Reset</a>
+                    </div>
+                </form>
+                </div>
+
+                <table id="auditTable" class="table table-striped table-hover table-bordered align-middle w-100">
                     <thead class="table-dark">
                         <tr>
                             <th>#</th>
@@ -204,32 +206,51 @@ function actionBadge(string $action, array $map): string
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+
             </div>
         </div>
-
-        <?php if (empty($logs)): ?>
-            <div class="text-center text-muted mt-4">
-                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                No audit log entries found.
-            </div>
-        <?php endif; ?>
 
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    $(document).ready(function () {
-        $('#auditTable').DataTable({
-            pageLength: 25,
-            order: [[0, 'desc']],
-            columnDefs: [{ orderable: false, targets: [6] }],
-            language: { search: 'Search logs:' }
-        });
+$(document).ready(function () {
+    const auditTable = $('#auditTable').DataTable({
+        pageLength: 10,
+        lengthMenu: [10, 25, 50],
+        order: [[0, 'desc']],
+        columnDefs: [{ orderable: false, targets: [6] }],
+        dom: '<"top d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center"ip>'
     });
+
+    const filterContainer = document.getElementById('filterContainer');
+    const dataTableWrapper = document.querySelector('#auditTable_wrapper');
+    const filterDiv = dataTableWrapper.querySelector('.top');
+
+    if (filterDiv && filterContainer) {
+        filterDiv.insertAdjacentElement('afterend', filterContainer);
+    }
+
+    const filterForm = filterContainer ? filterContainer.querySelector('form[method="GET"]') : null;
+    if (filterForm) {
+        const filterSelects = filterForm.querySelectorAll('select[name="module"], select[name="action"], select[name="user_id"]');
+        filterSelects.forEach(function (select) {
+            select.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        });
+        const dateInput = filterForm.querySelector('input[name="date"]');
+        if (dateInput) {
+            dateInput.addEventListener('change', function () {
+                filterForm.submit();
+            });
+        }
+    }
+});
 </script>
 </body>
 </html>
