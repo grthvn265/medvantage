@@ -1035,7 +1035,7 @@ $reportSystemName = 'MedVantage';
         let csv = fieldLabels.join(',') + '\n';
         data.forEach(row => {
             const values = fields.map(field => {
-                let value = row[field] || '';
+                let value = formatReportValue(field, row[field]);
                 if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
                     value = '"' + value.replace(/"/g, '""') + '"';
                 }
@@ -1074,7 +1074,7 @@ $reportSystemName = 'MedVantage';
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>${escapeHtml(getReportFilename('print'))}</title>
+                <title>${escapeHtml(currentReportData.title)} - Print View</title>
                 ${getReportDocumentStyles()}
             </head>
             <body>
