@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 $currentUser = getCurrentUser($pdo);
 if (!$currentUser || $currentUser['role_key'] !== 'super_admin') {
@@ -111,6 +112,15 @@ try {
     }
 
     $pdo->commit();
+
+    logAudit(
+        $pdo,
+        'CREATE',
+        'users',
+        $userId,
+        'Created user account: ' . $username
+    );
+
     setFlash('flash_success', 'Account created successfully.');
 } catch (Throwable $exception) {
     if ($pdo->inTransaction()) {

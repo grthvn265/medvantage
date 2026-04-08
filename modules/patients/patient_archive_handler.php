@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : null;
 $patient_id = isset($_GET['id']) ? (int) $_GET['id'] : null;
@@ -14,12 +15,14 @@ try {
         // Archive the patient
         $stmt = $pdo->prepare("UPDATE patients SET status = 'archive' WHERE patient_id = ?");
         $stmt->execute([$patient_id]);
+        logAudit($pdo, 'ARCHIVE', 'patients', $patient_id, 'Archived patient record');
         header("Location: patients.php?archived=1");
         exit;
     } elseif ($action === 'restore') {
         // Restore the patient
         $stmt = $pdo->prepare("UPDATE patients SET status = 'active' WHERE patient_id = ?");
         $stmt->execute([$patient_id]);
+        logAudit($pdo, 'RESTORE', 'patients', $patient_id, 'Restored patient record');
         header("Location: patients.php?restored=1&show_archived=1");
         exit;
     } elseif ($action === 'permanently_delete') {
@@ -43,6 +46,7 @@ try {
             $stmt->execute([$patient_id]);
             
             $pdo->commit();
+            logAudit($pdo, 'PERMANENTLY_DELETED', 'patients', $patient_id, 'Permanently deleted patient record');
             header("Location: patients.php?permanently_deleted=1&show_archived=1");
             exit;
         } catch (Exception $e) {

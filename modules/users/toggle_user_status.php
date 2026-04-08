@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 $currentUser = getCurrentUser($pdo);
 if (!$currentUser || $currentUser['role_key'] !== 'super_admin') {
@@ -46,6 +47,14 @@ if ($user['username'] === 'owner' || $user['role_key'] === 'super_admin') {
 $nextStatus = $currentStatus === 1 ? 0 : 1;
 $update = $pdo->prepare('UPDATE users SET is_active = ? WHERE user_id = ?');
 $update->execute([$nextStatus, $userId]);
+
+logAudit(
+    $pdo,
+    $nextStatus === 1 ? 'ACTIVATE' : 'DEACTIVATE',
+    'users',
+    $userId,
+    ($nextStatus === 1 ? 'Activated' : 'Deactivated') . ' user account: ' . $user['username']
+);
 
 setFlash('flash_success', $nextStatus === 1 ? 'Account activated.' : 'Account deactivated.');
 header('Location: users.php');

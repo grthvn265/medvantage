@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -238,7 +239,7 @@ try {
         !empty($emergency_email) ? $emergency_email : null
     ]);
 
-    $doctor_id = $pdo->lastInsertId();
+    $doctor_id = (int) $pdo->lastInsertId();
 
     // Insert unavailable days
     if (!empty($unavailable_days)) {
@@ -265,6 +266,8 @@ try {
     }
 
     $pdo->commit();
+
+    logAudit($pdo, 'CREATE', 'doctors', $doctor_id, 'Created doctor record');
 
     echo json_encode([
         'success' => true,

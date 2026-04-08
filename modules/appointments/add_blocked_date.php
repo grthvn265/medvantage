@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -61,6 +62,9 @@ try {
         VALUES (?, ?)
     ");
     $stmt->execute([$blocked_date, $reason]);
+
+    $blockedId = (int) $pdo->lastInsertId();
+    logAudit($pdo, 'BLOCK_DATE', 'appointments', $blockedId, 'Blocked date: ' . $blocked_date);
 
     echo json_encode(['success' => true, 'message' => 'Blocked date added']);
 

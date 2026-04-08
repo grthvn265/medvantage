@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if (!isset($_GET['id'])) {
     header("Location: doctors.php");
@@ -23,6 +24,7 @@ try {
     $stmt->execute([$doctor_id]);
 
     $pdo->commit();
+    logAudit($pdo, 'DELETE', 'doctors', $doctor_id, 'Deleted doctor record');
 
     header("Location: doctors.php?deleted=1");
     exit;

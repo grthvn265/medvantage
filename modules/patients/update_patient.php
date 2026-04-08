@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -238,6 +239,8 @@ try {
         ':emergency_email' => !empty($emergency_email) ? $emergency_email : null,
         ':patient_id' => $patient_id
     ]);
+
+    logAudit($pdo, 'UPDATE', 'patients', $patient_id, 'Updated patient record');
 
     echo json_encode([
         'success' => true,

@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if (!isset($_GET['id'])) {
     header("Location: patients.php?error=" . urlencode("No patient ID provided"));
@@ -29,6 +30,8 @@ try {
     // Delete the patient
     $stmt = $pdo->prepare("DELETE FROM patients WHERE patient_id = ?");
     $stmt->execute([$patient_id]);
+
+    logAudit($pdo, 'DELETE', 'patients', $patient_id, 'Deleted patient record');
 
     header("Location: patients.php?deleted=1");
     exit;

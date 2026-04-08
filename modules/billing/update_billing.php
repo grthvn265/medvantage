@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -75,6 +76,8 @@ try {
         $invoice_date,
         $billing_id
     ]);
+
+    logAudit($pdo, 'UPDATE', 'billing', $billing_id, 'Updated billing record');
 
     echo json_encode([
         'success' => true,

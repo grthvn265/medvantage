@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -36,6 +37,8 @@ try {
     // Update appointment status to Cancelled
     $stmt = $pdo->prepare("UPDATE appointments SET status = 'Cancelled' WHERE appointment_id = ?");
     $stmt->execute([$appointment_id]);
+
+    logAudit($pdo, 'CANCEL', 'appointments', $appointment_id, 'Cancelled appointment');
 
     echo json_encode(['success' => true, 'message' => 'Appointment cancelled successfully']);
 

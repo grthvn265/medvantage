@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 // Validate input
 $patient_id = isset($_POST['patient_id']) ? (int)$_POST['patient_id'] : null;
@@ -96,6 +97,9 @@ try {
         $reason,
         $status
     ]);
+
+    $appointmentId = (int) $pdo->lastInsertId();
+    logAudit($pdo, 'CREATE', 'appointments', $appointmentId, 'Created appointment');
 
     header("Location: appointment.php?success=1");
     exit;

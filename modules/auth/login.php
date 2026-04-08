@@ -1,5 +1,6 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 if (isLoggedIn($pdo)) {
     $activeUser = getCurrentUser($pdo);
@@ -19,6 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Invalid credentials or inactive account.';
     } else {
         $activeUser = getCurrentUser($pdo);
+        if ($activeUser) {
+            logAudit(
+                $pdo,
+                'LOGIN',
+                'auth',
+                (int) $activeUser['user_id'],
+                'User logged in: ' . $activeUser['username']
+            );
+        }
+
         $landingRoute = getLandingRouteForUser($pdo, $activeUser);
         $next = (string) ($_POST['next'] ?? '');
 
