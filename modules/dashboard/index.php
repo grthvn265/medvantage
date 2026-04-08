@@ -407,6 +407,8 @@ require '../../components/db.php';
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        const initialType = document.getElementById('reportTypeSelect').value;
+        loadFieldSelector(initialType);
         loadReportData();
     });
 
@@ -453,6 +455,11 @@ require '../../components/db.php';
 
     async function loadReportData() {
         const reportType = document.getElementById('reportTypeSelect').value;
+        // Ensure checkboxes exist before validating selected fields.
+        if (document.querySelectorAll('.field-checkbox').length === 0) {
+            loadFieldSelector(reportType);
+        }
+
         const selectedFields = getSelectedFields();
 
         if (selectedFields.length === 0) {
