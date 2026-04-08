@@ -24,7 +24,7 @@ Customize which fields to include in your report:
 ### 3. **Export Options**
 Export your reports in multiple formats:
 - **CSV Export** - Compatible with Excel, Google Sheets, and all spreadsheet applications
-- **PDF Export** - Professional formatted reports ready for sharing and archiving
+- **Print View** - Browser-native print output for sharing and archiving
 
 ### 4. **Real-Time Metrics**
 Each report displays key metrics:
@@ -63,7 +63,7 @@ Each report displays key metrics:
 ### Step 4: Export Data
 ```
 1. Click "CSV" to export as Excel-compatible CSV file
-2. Click "PDF" to export as formatted PDF document
+2. Click "Print" to open the printable report document
 3. Exports automatically include only selected fields
 4. Files are named with report type and date: {type}_report_YYYY-MM-DD.csv
 ```
@@ -158,7 +158,6 @@ Each report displays key metrics:
 
 ### Performance Optimization
 - For large datasets (>5000 records), limit field selection to essential fields
-- PDF exports of large tables work best with 10-15 columns
 - Use CSV for large reports for better compatibility
 
 ### Data Accuracy
@@ -173,9 +172,9 @@ Each report displays key metrics:
 - Compatible with all spreadsheet applications
 - Best for data analysis and manipulation
 
-**PDF Export:**
+**Print Output:**
 - Includes table headers and formatting
-- Landscape orientation for better column visibility
+- Landscape orientation support via browser print settings
 - Suitable for printing and archiving
 
 ## Common Workflows
@@ -185,7 +184,7 @@ Each report displays key metrics:
 1. Select "Billing Report"
 2. Configure Fields: Bill ID, Patient Name, Amount, Status, Created Date
 3. Export to CSV to process payments in Excel
-4. Export to PDF for archive
+4. Use Print for archive-ready output
 ```
 
 ### Doctor Performance Analysis
@@ -209,7 +208,7 @@ Each report displays key metrics:
 1. Select "Appointments Report"
 2. Configure Fields: Appointment Date, Doctor Name, Patient Name, Status
 3. Search by Status to filter results
-4. Export to PDF for management review
+4. Use Print for management review
 ```
 
 ## Troubleshooting
@@ -229,17 +228,17 @@ Each report displays key metrics:
 - This is normal - N/A or blank values are expected
 - Use the search feature to filter records with data
 
-### PDF export is blank
-- Try with fewer columns (reduce field selection)
-- Ensure table has loaded completely before exporting
-- Try CSV export as alternative
+### Print output is incomplete
+- Ensure table has loaded completely before printing
+- Try reducing selected columns for better print readability
+- Use CSV export as an alternative for large datasets
 
 ## System Requirements
 
 - Modern web browser (Chrome, Firefox, Safari, Edge)
 - JavaScript enabled
 - Minimum screen resolution: 1024x768 (for comfortable viewing)
-- PrintView capability for PDF export
+- Browser print capability
 
 ## Data Privacy
 

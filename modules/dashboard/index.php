@@ -401,9 +401,6 @@ $reportSystemName = 'MedVantage';
                             <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="printReport()" title="Print Report">
                                 <i class="bi bi-printer"></i> Print
                             </button>
-                            <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="exportToPDF()" title="Export to PDF">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
-                            </button>
                             <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="exportToCSV()" title="Export to CSV">
                                 <i class="bi bi-file-earmark-csv"></i> CSV
                             </button>
@@ -520,7 +517,6 @@ $reportSystemName = 'MedVantage';
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
     let reportTable = null;
@@ -865,24 +861,6 @@ $reportSystemName = 'MedVantage';
         `;
     }
 
-    function waitForImages(container) {
-        const images = Array.from(container.querySelectorAll('img'));
-
-        if (images.length === 0) {
-            return Promise.resolve();
-        }
-
-        return Promise.all(images.map(image => new Promise(resolve => {
-            if (image.complete) {
-                resolve();
-                return;
-            }
-
-            image.addEventListener('load', resolve, { once: true });
-            image.addEventListener('error', resolve, { once: true });
-        })));
-    }
-
     function buildReportDocumentMarkup() {
         const generatedAt = getReportTimestamp();
 
@@ -1109,80 +1087,6 @@ $reportSystemName = 'MedVantage';
         }, 250);
     }
 
-    function exportToPDF() {
-        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
-            alert('No data to export. Generate a report first.');
-            return;
-        }
-
-        if (typeof html2pdf === 'undefined') {
-            alert('PDF export library failed to load. Refresh the page and try again.');
-            return;
-        }
-
-        const exportStyle = document.createElement('style');
-        exportStyle.textContent = getReportDocumentStyles()
-            .replace('<style>', '')
-            .replace('</style>', '');
-        document.head.appendChild(exportStyle);
-
-        const exportHost = document.createElement('div');
-        exportHost.style.position = 'fixed';
-        exportHost.style.top = '0';
-        exportHost.style.left = '0';
-        exportHost.style.width = '1120px';
-        exportHost.style.padding = '0';
-        exportHost.style.margin = '0';
-        exportHost.style.pointerEvents = 'none';
-        exportHost.style.zIndex = '2147483647';
-        exportHost.style.background = '#ffffff';
-        exportHost.innerHTML = buildReportDocumentMarkup();
-        document.body.appendChild(exportHost);
-
-        const reportDocument = exportHost.querySelector('.report-document');
-
-        if (!reportDocument) {
-            document.body.removeChild(exportHost);
-            document.head.removeChild(exportStyle);
-            alert('Failed to prepare the report for PDF export.');
-            return;
-        }
-
-        reportDocument.style.opacity = '1';
-        reportDocument.style.visibility = 'visible';
-        reportDocument.style.background = '#ffffff';
-        reportDocument.style.width = '1120px';
-        reportDocument.style.margin = '0';
-
-        const opt = {
-            margin: 10,
-            filename: getReportFilename('pdf'),
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-                windowWidth: 1120
-            },
-            jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
-        };
-
-        waitForImages(reportDocument)
-            .then(() => new Promise(resolve => requestAnimationFrame(() => resolve())))
-            .then(() => html2pdf().set(opt).from(reportDocument).save())
-            .then(() => {
-                document.body.removeChild(exportHost);
-                document.head.removeChild(exportStyle);
-            })
-            .catch(error => {
-                console.error('PDF export failed:', error);
-                document.body.removeChild(exportHost);
-                document.head.removeChild(exportStyle);
-                alert('Failed to export the report as PDF.');
-            });
-    }
 </script>
 
 </body>
