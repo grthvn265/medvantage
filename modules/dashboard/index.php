@@ -871,7 +871,7 @@ $reportSystemName = 'MedVantage';
                         <img src="${escapeHtml(reportBranding.logoUrl)}" alt="${escapeHtml(reportBranding.systemName)} Logo">
                         <div>
                             <h1>${escapeHtml(currentReportData.title)}</h1>
-                            <p>${escapeHtml(reportBranding.systemName)} official report document</p>
+                            <p>${escapeHtml(reportBranding.systemName)} </p>
                         </div>
                     </div>
                     <div class="report-document-meta">
