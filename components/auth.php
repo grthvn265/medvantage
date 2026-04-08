@@ -90,6 +90,31 @@ function getDefaultModules(): array
         ],
     ];
 }
+            [
+                'module_key' => 'audit_log',
+                'module_label' => 'Audit Log',
+                'route_path' => '/modules/audit_log/audit_log.php',
+                'icon_class' => 'bi-journal-text',
+                'sort_order' => 7,
+            ],
+        ];
+    }
+            [
+                'module_key' => 'users',
+                'module_label' => 'Accounts',
+                'route_path' => '/modules/users/users.php',
+                'icon_class' => 'bi-shield-lock',
+                'sort_order' => 6,
+            ],
+            [
+                'module_key' => 'audit_log',
+                'module_label' => 'Audit Log',
+                'route_path' => '/modules/audit_log/audit_log.php',
+                'icon_class' => 'bi-journal-text',
+                'sort_order' => 7,
+            ],
+        ];
+    }
 
 function authTablesExist(PDO $pdo): bool
 {
