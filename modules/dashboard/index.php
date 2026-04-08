@@ -494,6 +494,14 @@ require '../../components/db.php';
     }
 
     function displayTableReport(data) {
+        // Destroy existing DataTable instance BEFORE modifying the DOM to avoid
+        // DataTables TN/18 "Incorrect column count" — DataTables caches column
+        // structure internally, so teardown must happen before thead/tbody are rebuilt.
+        if (reportTable) {
+            reportTable.destroy();
+            reportTable = null;
+        }
+
         const tbody = document.getElementById('tableBody');
         const thead = document.getElementById('tableHeaders');
         tbody.innerHTML = '';
@@ -526,7 +534,6 @@ require '../../components/db.php';
         });
 
         // Initialize DataTable
-        if (reportTable) reportTable.destroy();
         reportTable = $('#reportTable').DataTable({
             "pageLength": 10,
             "ordering": true,
