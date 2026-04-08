@@ -234,7 +234,7 @@ function getAppointmentsReport($fields, $pdo) {
             p.email AS patient_email,
             CONCAT(d.last_name, ', ', d.first_name) AS doctor_name,
             a.appointment_date,
-            a.appointment_time,
+            TIME_FORMAT(a.appointment_time, '%H:%i') as appointment_time,
             a.status,
             a.reason,
             a.created_at
@@ -249,6 +249,15 @@ function getAppointmentsReport($fields, $pdo) {
     
     $data = [];
     foreach ($appointments as $appt) {
+        // Format appointment_time to 12-hour range format
+        if (!empty($appt['appointment_time'])) {
+            $time = $appt['appointment_time'];
+            $hour = (int)substr($time, 0, 2);
+            $startTime = date('g:ia', strtotime($time));
+            $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+            $endTime = date('g:ia', strtotime($endHour . ':00'));
+            $appt['appointment_time'] = $startTime . ' - ' . $endTime;
+        }
         $row = [];
         foreach ($fields as $field) {
             $row[$field] = $appt[$field] ?? '';

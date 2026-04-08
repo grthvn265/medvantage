@@ -69,14 +69,14 @@ try {
     $stmt->execute([$doctor_id]);
     $availableTimes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // If no times set, doctor available all day
+    // If no times set, doctor available all day - use default hourly slots
     if (empty($availableTimes)) {
         $availableTimes = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
     }
 
     // Get booked times for this doctor on this date (excluding cancelled appointments and current appointment if editing)
     $query = "
-        SELECT DISTINCT TRIM(appointment_time) as appointment_time FROM appointments 
+        SELECT DISTINCT TIME_FORMAT(appointment_time, '%H:%i') as appointment_time FROM appointments 
         WHERE doctor_id = ? 
         AND appointment_date = ? 
         AND status != 'Cancelled'
@@ -97,9 +97,19 @@ try {
     // Remove booked times from available times
     $availableTimes = array_values(array_diff($availableTimes, $bookedTimes));
 
+    // Convert available times to hourly range format with 12-hour display
+    $availableTimeRanges = [];
+    foreach ($availableTimes as $time) {
+        $hour = (int)substr($time, 0, 2);
+        $startTime = date('g:ia', strtotime($time));
+        $nextHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+        $endTime = date('g:ia', strtotime($nextHour . ':00'));
+        $availableTimeRanges[] = $time . '|' . $startTime . ' - ' . $endTime;
+    }
+
     echo json_encode([
         'available' => true,
-        'times' => $availableTimes,
+        'times' => $availableTimeRanges,
         'dayOfWeek' => $dayOfWeek,
         'booked' => $bookedTimes
     ]);

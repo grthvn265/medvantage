@@ -10,6 +10,12 @@ $appointment_time = isset($_POST['appointment_time']) ? $_POST['appointment_time
 $reason = isset($_POST['reason']) ? $_POST['reason'] : null;
 $status = 'Scheduled'; // New appointments are always Scheduled
 
+// Extract start time from hourly range (e.g., "10:00-11:00" -> "10:00")
+if ($appointment_time && strpos($appointment_time, '-') !== false) {
+    $timeRange = explode('-', $appointment_time);
+    $appointment_time = trim($timeRange[0]);
+}
+
 // Validate required fields
 if (!$patient_id || !$doctor_id || !$appointment_date || !$appointment_time) {
     header("Location: appointment.php?error=" . urlencode("Missing required fields"));
@@ -55,7 +61,7 @@ try {
     // Check doctor availability - validate time
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM doctor_available_times 
-        WHERE doctor_id = ? AND time_slot = ?
+        WHERE doctor_id = ? AND TRIM(time_slot) = ?
     ");
     $stmt->execute([$doctor_id, $appointment_time]);
     $hasTimeSlot = $stmt->fetchColumn() > 0;
@@ -66,7 +72,7 @@ try {
     $hasAnyTimes = $stmt->fetchColumn() > 0;
 
     if ($hasAnyTimes && !$hasTimeSlot) {
-        throw new Exception("Doctor is not available at " . date("g:i A", strtotime($appointment_time)));
+        throw new Exception("Doctor is not available at this time slot");
     }
 
     // Check for double-booking
