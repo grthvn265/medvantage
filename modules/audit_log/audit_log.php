@@ -120,11 +120,6 @@ function actionBadge(string $action, array $map): string
 <div class="content-wrapper p-4">
     <div class="container-fluid">
 
-        <div class="d-flex align-items-center mb-3 mt-3">
-            <i class="bi bi-journal-text fs-3 me-2 text-teal" style="color:#0a7d7d"></i>
-            <h4 class="mb-0 fw-bold">Audit Log</h4>
-        </div>
-
         <div class="card shadow-sm">
             <div class="card-body">
 
