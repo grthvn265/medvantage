@@ -3,6 +3,22 @@ require '../../components/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+function sendJsonResponse($payload, $statusCode = 200) {
+    http_response_code($statusCode);
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+
+    if ($json === false) {
+        http_response_code(500);
+        $fallback = json_encode([
+            'error' => 'Failed to encode response data: ' . json_last_error_msg()
+        ]);
+        echo $fallback !== false ? $fallback : '{"error":"Failed to encode response data"}';
+        return;
+    }
+
+    echo $json;
+}
+
 $action = $_GET['action'] ?? '';
 $reportType = $_GET['type'] ?? '';
 
@@ -89,7 +105,7 @@ $availableFields = [
 if ($action === 'get_fields') {
     $type = $_GET['type'] ?? '';
     $fields = $availableFields[$type] ?? [];
-    echo json_encode(['fields' => $fields]);
+    sendJsonResponse(['fields' => $fields]);
     exit;
 }
 
@@ -104,7 +120,7 @@ if ($action === 'generate') {
     }
     
     $data = getReportData($type, $selectedFields, $pdo);
-    echo json_encode($data);
+    sendJsonResponse($data);
     exit;
 }
 
@@ -331,4 +347,4 @@ function getVisitsReport($fields, $pdo) {
     ];
 }
 
-echo json_encode(['error' => 'Invalid action']);
+sendJsonResponse(['error' => 'Invalid action'], 400);
