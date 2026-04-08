@@ -1127,15 +1127,15 @@ $reportSystemName = 'MedVantage';
         document.head.appendChild(exportStyle);
 
         const exportHost = document.createElement('div');
-        exportHost.style.position = 'absolute';
+        exportHost.style.position = 'fixed';
         exportHost.style.top = '0';
-        exportHost.style.left = '0';
+        exportHost.style.left = '50%';
+        exportHost.style.transform = 'translateX(-50%)';
         exportHost.style.width = '1120px';
         exportHost.style.padding = '0';
         exportHost.style.margin = '0';
-        exportHost.style.opacity = '0.01';
         exportHost.style.pointerEvents = 'none';
-        exportHost.style.zIndex = '-1';
+        exportHost.style.zIndex = '2147483647';
         exportHost.style.background = '#ffffff';
         exportHost.innerHTML = buildReportDocumentMarkup();
         document.body.appendChild(exportHost);
@@ -1148,6 +1148,10 @@ $reportSystemName = 'MedVantage';
             alert('Failed to prepare the report for PDF export.');
             return;
         }
+
+        reportDocument.style.opacity = '1';
+        reportDocument.style.visibility = 'visible';
+        reportDocument.style.background = '#ffffff';
 
         const opt = {
             margin: 10,
