@@ -45,8 +45,14 @@ if ($doctor_filter) {
 }
 
 if ($time_filter) {
-    $where[] = "a.appointment_time = ?";
-    $params[] = $time_filter;
+    // Extract start time from range if needed
+    $timeToFilter = $time_filter;
+    if (strpos($time_filter, '-') !== false) {
+        $timeRange = explode('-', $time_filter);
+        $timeToFilter = trim($timeRange[0]);
+    }
+    $where[] = "TIME_FORMAT(a.appointment_time, '%H:%i') = ?";
+    $params[] = $timeToFilter;
 }
 
 $where_sql = "WHERE " . implode(" AND ", $where);
@@ -79,9 +85,43 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll
 
 function timeSlots() {
     return [
-        "10:00","11:00","12:00","13:00",
-        "14:00","15:00","16:00","17:00","18:00"
+        "10:00-11:00",
+        "11:00-12:00",
+        "12:00-13:00",
+        "13:00-14:00",
+        "14:00-15:00",
+        "15:00-16:00",
+        "16:00-17:00",
+        "17:00-18:00",
+        "18:00-19:00"
     ];
+}
+
+function formatTimeSlot($timeStr) {
+    // Convert stored time (e.g., "10:00") to hourly range format with 12-hour time
+    if (strpos($timeStr, '-') !== false) {
+        return $timeStr; // Already in range format
+    }
+    // Extract hour from time string
+    $hour = (int)substr($timeStr, 0, 2);
+    $startTime = date('g:ia', strtotime($timeStr));
+    $endHour = $hour + 1;
+    $endTime = date('g:ia', strtotime(str_pad($endHour, 2, '0', STR_PAD_LEFT) . ':00'));
+    return $startTime . ' - ' . $endTime;
+}
+
+function convertTo12Hour($time24) {
+    // Convert 24-hour format to 12-hour format (e.g., "13:00" -> "1:00pm")
+    return date('g:ia', strtotime($time24));
+}
+
+function getTimeRangeDisplay($time24) {
+    // Convert 24-hour time to 12-hour range format (e.g., "13:00" -> "1:00pm - 2:00pm")
+    $hour = (int)substr($time24, 0, 2);
+    $startTime = convertTo12Hour($time24);
+    $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+    $endTime = convertTo12Hour($endHour . ':00');
+    return $startTime . ' - ' . $endTime;
 }
 ?>
 
@@ -246,7 +286,7 @@ function timeSlots() {
 <select name="time" class="form-select form-select-sm">
 <option value="">Time</option>
 <?php foreach (timeSlots() as $time): ?>
-<option value="<?= $time ?>" <?= $time_filter === $time ? 'selected' : '' ?>><?= date("g:i A", strtotime($time)) ?></option>
+<option value="<?= $time ?>" <?= $time_filter === $time ? 'selected' : '' ?>><?= getTimeRangeDisplay($time) ?></option>
 <?php endforeach; ?>
 </select>
 </div>
@@ -308,7 +348,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 <tr>
 <td><?= $a['appointment_id'] ?></td>
 <td><?= date("M d, Y", strtotime($a['appointment_date'])) ?></td>
-<td><?= date("g:i A", strtotime($a['appointment_time'])) ?></td>
+<td><?= formatTimeSlot(date("H:i", strtotime($a['appointment_time']))) ?></td>
 <td><?= $a['p_lname'] ?>, <?= $a['p_fname'] ?></td>
 <td>Dr. <?= $a['d_lname'] ?></td>
 <td>
@@ -393,7 +433,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 <select id="appointmentTime" name="appointment_time" class="form-select" required>
 <option value="">Select Time</option>
 <?php foreach (timeSlots() as $time): ?>
-<option value="<?= $time ?>"><?= date("g:i A", strtotime($time)) ?></option>
+<option value="<?= $time ?>"><?= getTimeRangeDisplay($time) ?></option>
 <?php endforeach; ?>
 </select>
 <div class="error-message" id="timeError"></div>
@@ -789,11 +829,8 @@ async function fetchAvailableTimes(doctorId, date) {
         // Populate time dropdown with available times
         let html = '<option value="">Select Time</option>';
         data.times.forEach(time => {
-            const displayTime = new Date('1970-01-01 ' + time).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit'
-            });
-            html += `<option value="${time}">${displayTime}</option>`;
+            // time is already in format "10:00-11:00"
+            html += `<option value="${time}">${time}</option>`;
         });
 
         elements.appointmentTime.innerHTML = html;
