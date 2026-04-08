@@ -34,6 +34,78 @@ require '../../components/db.php';
         .bg-gradient {
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
         }
+        
+        /* Enhanced Reports Styling */
+        #reportTable thead th {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 15px !important;
+            border: none !important;
+            color: white;
+        }
+        
+        #reportTable tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        #reportTable tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        
+        #reportTable tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.08) !important;
+        }
+        
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .form-check-input {
+            border-color: #ddd;
+            cursor: pointer;
+        }
+        
+        .form-check-label {
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #333;
+            user-select: none;
+        }
+        
+        .form-check-label:hover {
+            color: #667eea;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            transition: all 0.3s ease;
+        }
+        
+        .btn-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        #tableMetricsContainer .card {
+            cursor: default;
+        }
+        
+        #tableMetricsContainer .card:hover {
+            border-color: rgba(102, 126, 234, 0.3) !important;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15) !important;
+            transition: all 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -209,18 +281,19 @@ require '../../components/db.php';
         <?php endif; ?>
 
         <!-- REPORTS HEADER -->
-        <div class="bg-dark text-white p-3 mb-4" style="border-radius: 5px;">
-            <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Reports & Analytics</h4>
+        <div class="text-white p-4 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);">
+            <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-bar-graph me-2"></i>Reports & Analytics Center</h4>
+            <p class="mb-0 mt-2 opacity-75">Generate and analyze data across all modules</p>
         </div>
 
         <!-- REPORT SECTION -->
         <div class="report-section">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-gradient text-white" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);">
+            <div class="card shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 25px;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div class="d-flex align-items-center gap-3 flex-wrap">
-                            <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph"></i> Reports</h5>
-                            <select class="form-select" id="reportTypeSelect" style="width: 280px; background-color: rgba(255,255,255,0.9); padding: 10px 12px; font-size: 15px;" onchange="handleReportChange()">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph"></i> Generate Reports</h5>
+                            <select class="form-select" id="reportTypeSelect" style="width: 280px; background-color: rgba(255,255,255,0.95); padding: 10px 12px; font-size: 15px; border-radius: 6px; border: 2px solid rgba(255,255,255,0.3);" onchange="handleReportChange()">
                                 <option value="patients">Patients Report</option>
                                 <option value="doctors">Doctors Report</option>
                                 <option value="appointments">Appointments Report</option>
@@ -228,34 +301,38 @@ require '../../components/db.php';
                                 <option value="visits">Visits Report</option>
                             </select>
                         </div>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal" data-bs-target="#fieldSelectorModal" title="Select Fields">
-                                <i class="bi bi-sliders"></i> Configure Fields
+                        <div class="btn-group" role="group" style="flex-wrap: wrap;">
+                            <button type="button" class="btn btn-light fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#fieldSelectorModal" title="Select Fields">
+                                <i class="bi bi-sliders"></i> Configure
                             </button>
-                            <button type="button" class="btn btn-light fw-bold" onclick="exportToPDF()" title="Export to PDF">
+                            <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="printReport()" title="Print Report">
+                                <i class="bi bi-printer"></i> Print
+                            </button>
+                            <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="exportToPDF()" title="Export to PDF">
                                 <i class="bi bi-file-earmark-pdf"></i> PDF
                             </button>
-                            <button type="button" class="btn btn-light fw-bold" onclick="exportToCSV()" title="Export to CSV">
+                            <button type="button" class="btn btn-light fw-bold px-3 py-2" onclick="exportToCSV()" title="Export to CSV">
                                 <i class="bi bi-file-earmark-csv"></i> CSV
                             </button>
                         </div>
                     </div>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-4" style="background: linear-gradient(to bottom, rgba(102, 126, 234, 0.05) 0%, rgba(255, 255, 255, 0.5) 100%);">
 
                     <!-- Loading Spinner -->
                     <div id="reportLoader" class="text-center d-none mb-4">
-                        <div class="spinner-border text-primary" role="status">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                             <span class="visually-hidden">Loading...</span>
                         </div>
+                        <p class="text-muted mt-3">Loading report data...</p>
                     </div>
 
                     <!-- Report Table -->
                     <div id="tableContainer">
                         <div class="row g-4 mb-4">
                             <div class="col-lg-12">
-                                <div class="text-center mb-3">
-                                    <h6 class="fw-bold text-dark">Key Metrics</h6>
+                                <div class="mb-3">
+                                    <h6 class="fw-bold text-dark mb-3"><i class="bi bi-speedometer2"></i> Key Metrics</h6>
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;" id="tableMetricsContainer">
                                     <!-- Metrics will be loaded here -->
@@ -263,9 +340,11 @@ require '../../components/db.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive">
-                            <table id="reportTable" class="table table-striped table-hover table-bordered align-middle">
-                                <thead class="table-dark" id="tableHeaders">
+                        <hr class="my-4">
+
+                        <div class="table-responsive" style="border-radius: 8px; overflow: hidden;">
+                            <table id="reportTable" class="table table-striped table-hover table-bordered align-middle" style="margin-bottom: 0;">
+                                <thead class="table-dark" id="tableHeaders" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);">
                                     <!-- Headers will be generated dynamically -->
                                 </thead>
                                 <tbody id="tableBody">
@@ -287,26 +366,26 @@ require '../../components/db.php';
 <!-- FIELD SELECTOR MODAL -->
 <div class="modal fade" id="fieldSelectorModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold">Select Report Fields</h5>
+        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
+            <div class="modal-header text-white fw-bold" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 25px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-2"></i>Configure Report Fields</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div class="row g-3">
                     <div class="col-12">
-                        <p class="text-muted mb-3">Select which fields to include in the report and export:</p>
-                        <div id="fieldCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                        <p class="text-muted mb-4"><i class="bi bi-info-circle me-2"></i>Select which fields to include in the report and export:</p>
+                        <div id="fieldCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
                             <!-- Field checkboxes will be generated here -->
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-secondary" onclick="selectAllFields()">Select All</button>
-                <button type="button" class="btn btn-sm btn-warning" onclick="deselectAllFields()">Deselect All</button>
+            <div class="modal-footer" style="background: rgba(102, 126, 234, 0.05); padding: 20px;">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllFields()"><i class="bi bi-x-circle me-1"></i> Clear All</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllFields()"><i class="bi bi-check-circle me-1"></i> Select All</button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="loadReportData()">Apply & Generate Report</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="loadReportData()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;"><i class="bi bi-arrow-right me-1"></i> Apply & Generate</button>
             </div>
         </div>
     </div>
@@ -556,14 +635,14 @@ require '../../components/db.php';
             'Total Records': data.total_records,
             'Report Type': data.title,
             'Fields Selected': data.fields.length,
-            'Generate Date': new Date().toLocaleDateString('en-PH')
+            'Generated': new Date().toLocaleDateString('en-PH')
         };
 
         Object.entries(metrics).forEach(([label, value]) => {
             const html = `
-                <div class="card text-center p-3 shadow-sm">
-                    <h6 class="text-muted mb-2">${label}</h6>
-                    <h3 class="fw-bold text-primary">${value}</h3>
+                <div class="card text-center p-4 shadow-sm" style="border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; transition: all 0.3s ease;">
+                    <h6 class="text-muted mb-2 fw-bold" style="font-size: 0.9rem;">${label}</h6>
+                    <h3 class="fw-bold" style="color: #667eea; font-size: 1.8rem;">${value}</h3>
                 </div>
             `;
             container.innerHTML += html;
@@ -605,7 +684,205 @@ require '../../components/db.php';
         document.body.removeChild(link);
     }
 
-    function exportToPDF() {
+    function printReport() {
+        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
+            alert('No data to print. Generate a report first.');
+            return;
+        }
+
+        // Create a new window for printing
+        const printWindow = window.open('', '', 'height=700,width=1200');
+        const htmlContent = document.documentElement.innerHTML;
+        
+        // Get CSS styles
+        const styles = `
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    color: #333;
+                    background: white;
+                    padding: 20px;
+                }
+                .print-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #667eea;
+                    padding-bottom: 20px;
+                }
+                .print-header h2 {
+                    color: #667eea;
+                    font-size: 28px;
+                    margin-bottom: 5px;
+                }
+                .print-header p {
+                    color: #666;
+                    font-size: 14px;
+                }
+                .print-info {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                }
+                .print-info-item {
+                    padding: 10px;
+                }
+                .print-info-label {
+                    font-size: 12px;
+                    color: #666;
+                    margin-bottom: 5px;
+                    font-weight: 600;
+                }
+                .print-info-value {
+                    font-size: 18px;
+                    color: #667eea;
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                    background: white;
+                }
+                thead {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+                th {
+                    padding: 15px;
+                    text-align: left;
+                    font-weight: 600;
+                    border: 1px solid #ddd;
+                }
+                td {
+                    padding: 12px 15px;
+                    border: 1px solid #ddd;
+                }
+                tbody tr:nth-child(odd) {
+                    background: #f9f9f9;
+                }
+                tbody tr:hover {
+                    background: #f0f0f0;
+                }
+                .print-footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #999;
+                    padding-top: 20px;
+                    border-top: 1px solid #ddd;
+                }
+                @media print {
+                    body {
+                        padding: 0;
+                    }
+                    @page {
+                        size: A4 landscape;
+                        margin: 10mm;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            </style>
+        `;
+
+        const data = currentReportData.data;
+        const fields = currentReportData.fields;
+        const fieldLabels = fields.map(f => fieldDefinitions[currentReportData.type][f] || f);
+
+        // Build table rows
+        let tableRows = '';
+        data.forEach(row => {
+            tableRows += '<tr>';
+            fields.forEach(field => {
+                let value = row[field] || '';
+                if (field === 'amount') {
+                    value = '₱' + (typeof value === 'number' ? value.toLocaleString('en-PH', {minimumFractionDigits: 2}) : value);
+                }
+                tableRows += `<td>${value}</td>`;
+            });
+            tableRows += '</tr>';
+        });
+
+        const reportDate = new Date().toLocaleDateString('en-PH', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>${currentReportData.type}_report_${new Date().toISOString().split('T')[0]}</title>
+                ${styles}
+            </head>
+            <body>
+                <div class="print-header">
+                    <h2><i>📊</i> ${currentReportData.title}</h2>
+                    <p>Generated on ${reportDate}</p>
+                </div>
+
+                <div class="print-info">
+                    <div class="print-info-item">
+                        <div class="print-info-label">Total Records</div>
+                        <div class="print-info-value">${currentReportData.total_records}</div>
+                    </div>
+                    <div class="print-info-item">
+                        <div class="print-info-label">Report Type</div>
+                        <div class="print-info-value">${currentReportData.title}</div>
+                    </div>
+                    <div class="print-info-item">
+                        <div class="print-info-label">Fields Selected</div>
+                        <div class="print-info-value">${fields.length}</div>
+                    </div>
+                    <div class="print-info-item">
+                        <div class="print-info-label">Generated Date</div>
+                        <div class="print-info-value">${new Date().toLocaleDateString('en-PH')}</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            ${fieldLabels.map(label => `<th>${label}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+
+                <div class="print-footer">
+                    <p>This is an auto-generated report from the Patient Information System.</p>
+                    <p style="margin-top: 10px;">© ${new Date().getFullYear()} MedVantage - All Rights Reserved</p>
+                </div>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+
+        // Wait for content to load before printing
+        setTimeout(() => {
+            printWindow.print();
+        }, 250);
+    }
+
+    function exportToCSV() {
         if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
             alert('No data to export. Generate a report first.');
             return;
