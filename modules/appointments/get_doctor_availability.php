@@ -97,14 +97,11 @@ try {
     // Remove booked times from available times
     $availableTimes = array_values(array_diff($availableTimes, $bookedTimes));
 
-    // Convert available times to hourly range format with 12-hour display
+    // Convert available times to 12-hour format
     $availableTimeRanges = [];
     foreach ($availableTimes as $time) {
-        $hour = (int)substr($time, 0, 2);
-        $startTime = date('g:ia', strtotime($time));
-        $nextHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
-        $endTime = date('g:ia', strtotime($nextHour . ':00'));
-        $availableTimeRanges[] = $time . '|' . $startTime . ' - ' . $endTime;
+        $displayTime = date('g:ia', strtotime($time));
+        $availableTimeRanges[] = $time . '|' . $displayTime;
     }
 
     echo json_encode([

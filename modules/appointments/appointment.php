@@ -85,29 +85,21 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll
 
 function timeSlots() {
     return [
-        "10:00-11:00",
-        "11:00-12:00",
-        "12:00-13:00",
-        "13:00-14:00",
-        "14:00-15:00",
-        "15:00-16:00",
-        "16:00-17:00",
-        "17:00-18:00",
-        "18:00-19:00"
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00"
     ];
 }
 
 function formatTimeSlot($timeStr) {
-    // Convert stored time (e.g., "10:00") to hourly range format with 12-hour time
-    if (strpos($timeStr, '-') !== false) {
-        return $timeStr; // Already in range format
-    }
-    // Extract hour from time string
-    $hour = (int)substr($timeStr, 0, 2);
-    $startTime = date('g:ia', strtotime($timeStr));
-    $endHour = $hour + 1;
-    $endTime = date('g:ia', strtotime(str_pad($endHour, 2, '0', STR_PAD_LEFT) . ':00'));
-    return $startTime . ' - ' . $endTime;
+    // Convert stored time (e.g., "10:00") to 12-hour format (e.g., "10:00am")
+    return date('g:ia', strtotime($timeStr));
 }
 
 function convertTo12Hour($time24) {
@@ -116,12 +108,8 @@ function convertTo12Hour($time24) {
 }
 
 function getTimeRangeDisplay($time24) {
-    // Convert 24-hour time to 12-hour range format (e.g., "13:00" -> "1:00pm - 2:00pm")
-    $hour = (int)substr($time24, 0, 2);
-    $startTime = convertTo12Hour($time24);
-    $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
-    $endTime = convertTo12Hour($endHour . ':00');
-    return $startTime . ' - ' . $endTime;
+    // Convert 24-hour time to 12-hour format (e.g., "13:00" -> "1:00pm")
+    return date('g:ia', strtotime($time24));
 }
 ?>
 
@@ -829,8 +817,9 @@ async function fetchAvailableTimes(doctorId, date) {
         // Populate time dropdown with available times
         let html = '<option value="">Select Time</option>';
         data.times.forEach(time => {
-            // time is already in format "10:00-11:00"
-            html += `<option value="${time}">${time}</option>`;
+            // time is in format "10:00|10:00am"
+            const [value, display] = time.split('|');
+            html += `<option value="${value}">${display}</option>`;
         });
 
         elements.appointmentTime.innerHTML = html;
