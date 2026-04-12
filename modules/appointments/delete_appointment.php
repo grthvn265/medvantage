@@ -3,7 +3,7 @@ require '../../components/db.php';
 require '../../components/audit_log.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: appointment.php");
+    header('Location: ' . appUrl('/appointments'));
     exit;
 }
 
@@ -15,7 +15,7 @@ try {
 
     logAudit($pdo, 'DELETE', 'appointments', $appointment_id, 'Deleted appointment');
 
-    header("Location: appointment.php?deleted=1");
+    header('Location: ' . appUrl('/appointments?deleted=1'));
     exit;
 
 } catch (PDOException $e) {

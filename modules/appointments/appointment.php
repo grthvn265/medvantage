@@ -361,10 +361,10 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 <td>
 <?php if (!$show_archived): ?>
 <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#viewAppointmentModal" onclick="loadAppointmentDetails(<?= $a['appointment_id'] ?>, <?= $a['patient_id'] ?>, <?= $a['doctor_id'] ?>, '<?= $a['appointment_date'] ?>', '<?= $a['appointment_time'] ?>', '<?= $a['status'] ?>')">View</button>
-<a href="appointment_archive_handler.php?action=archive&id=<?= $a['appointment_id'] ?>" class="btn btn-secondary btn-sm" onclick="return confirm('Archive this appointment?');">Archive</a>
+<a href="<?= htmlspecialchars(appUrl('/modules/appointments/appointment_archive_handler.php?action=archive&id=' . (int) $a['appointment_id'])) ?>" class="btn btn-secondary btn-sm" onclick="return confirm('Archive this appointment?');">Archive</a>
 <?php else: ?>
-<a href="appointment_archive_handler.php?action=restore&id=<?= $a['appointment_id'] ?>" class="btn btn-info btn-sm" onclick="return confirm('Are you sure you want to restore this appointment?');">Restore</a>
-<a href="appointment_archive_handler.php?action=permanently_delete&id=<?= $a['appointment_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete? This cannot be undone.');">Delete</a>
+<a href="<?= htmlspecialchars(appUrl('/modules/appointments/appointment_archive_handler.php?action=restore&id=' . (int) $a['appointment_id'])) ?>" class="btn btn-info btn-sm" onclick="return confirm('Are you sure you want to restore this appointment?');">Restore</a>
+<a href="<?= htmlspecialchars(appUrl('/modules/appointments/appointment_archive_handler.php?action=permanently_delete&id=' . (int) $a['appointment_id'])) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Permanently delete? This cannot be undone.');">Delete</a>
 <?php endif; ?>
 </td>
 </tr>
@@ -383,7 +383,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
       </div>
       <div class="modal-body">
 
-<form action="save_appointment.php" method="POST">
+<form action="<?= htmlspecialchars(appUrl('/modules/appointments/save_appointment.php')) ?>" method="POST">
 
 <div class="row g-3">
 
@@ -692,7 +692,7 @@ function cancelAppointmentFromModal() {
     formData.append('appointment_id', data.appointmentId);
     formData.append('action', 'cancel');
     
-    fetch('cancel_appointment.php', {
+    fetch('<?= htmlspecialchars(appUrl('/modules/appointments/cancel_appointment.php')) ?>', {
         method: 'POST',
         body: formData
     })
@@ -800,7 +800,7 @@ async function fetchAvailableTimes(doctorId, date) {
         showTimeLoadingState();
 
         const response = await fetch(
-            `get_doctor_availability.php?doctor_id=${doctorId}&date=${date}`
+            `<?= htmlspecialchars(appUrl('/modules/appointments/get_doctor_availability.php')) ?>?doctor_id=${doctorId}&date=${date}`
         );
 
         const data = await response.json();
@@ -1054,7 +1054,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // Blocked dates management
 
 function loadBlockedDates() {
-    fetch('get_blocked_dates.php')
+    fetch('<?= htmlspecialchars(appUrl('/modules/appointments/get_blocked_dates.php')) ?>')
         .then(res => res.json())
         .then(data => {
             if (data.success) {
@@ -1166,7 +1166,7 @@ function addBlockedDate() {
     formData.append('blocked_date', date);
     formData.append('reason', reason);
 
-    fetch('add_blocked_date.php', {
+    fetch('<?= htmlspecialchars(appUrl('/modules/appointments/add_blocked_date.php')) ?>', {
         method: 'POST',
         body: formData
     })
@@ -1196,7 +1196,7 @@ function removeBlockedDate(id) {
     const formData = new FormData();
     formData.append('id', id);
 
-    fetch('remove_blocked_date.php', {
+    fetch('<?= htmlspecialchars(appUrl('/modules/appointments/remove_blocked_date.php')) ?>', {
         method: 'POST',
         body: formData
     })
@@ -1284,7 +1284,7 @@ if (filterDiv && filterContainer) {
             const formData = new FormData(this);
             
             try {
-                const response = await fetch('save_visit_from_appointment.php', {
+                const response = await fetch('<?= htmlspecialchars(appUrl('/modules/appointments/save_visit_from_appointment.php')) ?>', {
                     method: 'POST',
                     body: formData
                 });

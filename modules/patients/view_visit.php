@@ -1,7 +1,7 @@
 <?php
 include '../../components/db.php';
 if (!isset($_GET['id'])) {
-    header("Location: patients.php");
+    header('Location: ' . appUrl('/patients'));
     exit;
 }
 
@@ -77,7 +77,7 @@ if (!$visit) {
 
                 <hr>
 
-                <a href="patient_visit_history.php?id=<?= $visit['patient_id'] ?>" 
+                     <a href="<?= htmlspecialchars(appUrl('/modules/patients/patient_visit_history.php?id=' . (int) $visit['patient_id'])) ?>" 
                    class="btn btn-secondary">
                    Back to Patient
                 </a>

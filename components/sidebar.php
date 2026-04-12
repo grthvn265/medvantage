@@ -337,7 +337,7 @@ $currentModule = currentModuleKeyFromPath();
                 <div class="opacity-75"><?= htmlspecialchars($sidebarUser['role_name']) ?></div>
             </div>
         <?php endif; ?>
-        <a class="nav-link" href="<?= htmlspecialchars(appUrl('/modules/auth/logout.php')) ?>">
+        <a class="nav-link" href="<?= htmlspecialchars(appUrl('/logout')) ?>">
             <i class="bi bi-box-arrow-right"></i> Logout
         </a>
     </div>

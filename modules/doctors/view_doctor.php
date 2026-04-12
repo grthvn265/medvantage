@@ -2,7 +2,7 @@
 require '../../components/db.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: doctors.php");
+    header('Location: ' . appUrl('/doctors'));
     exit;
 }
 
@@ -99,7 +99,7 @@ $times = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00
         <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal">
             Edit Doctor
         </button>
-        <a href="doctors.php" class="btn btn-secondary">Back</a>
+        <a href="<?= htmlspecialchars(appUrl('/doctors')) ?>" class="btn btn-secondary">Back</a>
     </div>
 </div>
 
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         
         try {
-            const response = await fetch('update_doctor.php', {
+            const response = await fetch('<?= htmlspecialchars(appUrl('/modules/doctors/update_doctor.php')) ?>', {
                 method: 'POST',
                 body: formData
             });

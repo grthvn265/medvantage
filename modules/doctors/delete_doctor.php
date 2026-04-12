@@ -3,7 +3,7 @@ require '../../components/db.php';
 require '../../components/audit_log.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: doctors.php");
+    header('Location: ' . appUrl('/doctors'));
     exit;
 }
 
@@ -26,7 +26,7 @@ try {
     $pdo->commit();
     logAudit($pdo, 'DELETE', 'doctors', $doctor_id, 'Deleted doctor record');
 
-    header("Location: doctors.php?deleted=1");
+    header('Location: ' . appUrl('/doctors?deleted=1'));
     exit;
 
 } catch (Exception $e) {

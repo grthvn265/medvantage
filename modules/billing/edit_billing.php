@@ -2,7 +2,7 @@
 include "../../components/db.php";
 
 if (!isset($_GET["id"])) {
-    header("Location: billing.php");
+    header('Location: ' . appUrl('/billing'));
     exit;
 }
 
@@ -147,7 +147,7 @@ document.getElementById("editBillingForm").addEventListener("submit", async func
     const formData = new FormData(this);
 
     try {
-        const response = await fetch("update_billing.php", {
+        const response = await fetch("<?= htmlspecialchars(appUrl('/modules/billing/update_billing.php')) ?>", {
             method: "POST",
             body: formData
         });
@@ -164,7 +164,7 @@ document.getElementById("editBillingForm").addEventListener("submit", async func
             document.getElementById("formMessages").innerHTML = successHtml;
 
             setTimeout(() => {
-                window.location.href = "billing.php";
+                window.location.href = "<?= htmlspecialchars(appUrl('/billing')) ?>";
             }, 2000);
         } else {
             const errorHtml = `

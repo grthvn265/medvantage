@@ -527,6 +527,7 @@ $reportSystemName = 'MedVantage';
         'logoUrl' => $reportLogoUrl,
         'generatedBy' => $reportGeneratedBy,
     ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES) ?>;
+    const reportDataEndpoint = <?= json_encode(appUrl('/dashboard/reports'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES) ?>;
 
     const fieldDefinitions = {
         'patients': {
@@ -926,7 +927,7 @@ $reportSystemName = 'MedVantage';
 
         try {
             const fieldsParam = encodeURIComponent(JSON.stringify(selectedFields));
-            const response = await fetch(`reports.php?action=generate&type=${reportType}&fields=${fieldsParam}`);
+            const response = await fetch(`${reportDataEndpoint}?action=generate&type=${reportType}&fields=${fieldsParam}`);
             const data = await response.json();
 
             if (data.error) {

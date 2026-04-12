@@ -6,7 +6,7 @@ $action = isset($_GET['action']) ? $_GET['action'] : null;
 $patient_id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
 if (!$patient_id) {
-    header("Location: patients.php?error=Invalid patient");
+    header('Location: ' . appUrl('/patients?error=Invalid%20patient'));
     exit;
 }
 
@@ -16,14 +16,14 @@ try {
         $stmt = $pdo->prepare("UPDATE patients SET status = 'archive' WHERE patient_id = ?");
         $stmt->execute([$patient_id]);
         logAudit($pdo, 'ARCHIVE', 'patients', $patient_id, 'Archived patient record');
-        header("Location: patients.php?archived=1");
+        header('Location: ' . appUrl('/patients?archived=1'));
         exit;
     } elseif ($action === 'restore') {
         // Restore the patient
         $stmt = $pdo->prepare("UPDATE patients SET status = 'active' WHERE patient_id = ?");
         $stmt->execute([$patient_id]);
         logAudit($pdo, 'RESTORE', 'patients', $patient_id, 'Restored patient record');
-        header("Location: patients.php?restored=1&show_archived=1");
+        header('Location: ' . appUrl('/patients?restored=1&show_archived=1'));
         exit;
     } elseif ($action === 'permanently_delete') {
         // Permanently delete the patient and related records
@@ -47,7 +47,7 @@ try {
             
             $pdo->commit();
             logAudit($pdo, 'PERMANENTLY_DELETED', 'patients', $patient_id, 'Permanently deleted patient record');
-            header("Location: patients.php?permanently_deleted=1&show_archived=1");
+            header('Location: ' . appUrl('/patients?permanently_deleted=1&show_archived=1'));
             exit;
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -58,5 +58,5 @@ try {
     die("Error: " . $e->getMessage());
 }
 
-header("Location: patients.php?error=Unknown action");
+header('Location: ' . appUrl('/patients?error=Unknown%20action'));
 exit;

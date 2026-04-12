@@ -2,7 +2,7 @@
 require '../../components/db.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: patients.php");
+    header('Location: ' . appUrl('/patients'));
     exit;
 }
 
@@ -66,10 +66,10 @@ $age = $today->diff($dob)->y;
                         <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal">
                             Edit Patient
                         </button>
-                        <a href="patient_visit_history.php?id=<?= $patient_id ?>" class="btn btn-info">
+                        <a href="<?= htmlspecialchars(appUrl('/modules/patients/patient_visit_history.php?id=' . (int) $patient_id)) ?>" class="btn btn-info">
                             View Visit History
                         </a>
-                        <a href="patients.php" class="btn btn-secondary">Back</a>
+                        <a href="<?= htmlspecialchars(appUrl('/patients')) ?>" class="btn btn-secondary">Back</a>
                     </div>
                 </div>
 
@@ -581,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             
             try {
-                const response = await fetch('update_patient.php', {
+                const response = await fetch('<?= htmlspecialchars(appUrl('/modules/patients/update_patient.php')) ?>', {
                     method: 'POST',
                     body: formData
                 });

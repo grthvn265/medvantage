@@ -266,18 +266,18 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll
                     <?= $bill['status'] !== 'Paid' ? 'disabled title="Receipt only available for Paid invoices"' : '' ?>>
                     Receipt
                 </button>
-                <a href="billing_archive_handler.php?action=archive&id=<?= $bill['billing_id'] ?>" 
+                     <a href="<?= htmlspecialchars(appUrl('/modules/billing/billing_archive_handler.php?action=archive&id=' . (int) $bill['billing_id'])) ?>" 
                    class="btn btn-secondary btn-sm"
                    onclick="return confirm('Archive this billing record?');">
                    Archive
                 </a>
                 <?php else: ?>
-                <a href="billing_archive_handler.php?action=restore&id=<?= $bill['billing_id'] ?>" 
+                     <a href="<?= htmlspecialchars(appUrl('/modules/billing/billing_archive_handler.php?action=restore&id=' . (int) $bill['billing_id'])) ?>" 
                    class="btn btn-info btn-sm"
                    onclick="return confirm('Are you sure you want to restore this billing record?');">
                    Restore
                 </a>
-                <a href="billing_archive_handler.php?action=permanently_delete&id=<?= $bill['billing_id'] ?>" 
+                     <a href="<?= htmlspecialchars(appUrl('/modules/billing/billing_archive_handler.php?action=permanently_delete&id=' . (int) $bill['billing_id'])) ?>" 
                    class="btn btn-danger btn-sm"
                    onclick="return confirm('Permanently delete? This cannot be undone.');">
                    Delete

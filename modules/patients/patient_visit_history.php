@@ -2,7 +2,7 @@
 require '../../components/db.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: patients.php");
+    header('Location: ' . appUrl('/patients'));
     exit;
 }
 
@@ -81,7 +81,7 @@ $visits = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <td>Dr. <?= $visit['last_name'] ?>, <?= $visit['first_name'] ?></td>
                                     <td><?= !empty($visit['nature_of_visit']) ? substr($visit['nature_of_visit'], 0, 50) . (strlen($visit['nature_of_visit']) > 50 ? '...' : '') : 'N/A' ?></td>
                                     <td>
-                                        <a href="view_visit.php?id=<?= $visit['visit_id'] ?>" class="btn btn-sm btn-info">View</a>
+                                        <a href="<?= htmlspecialchars(appUrl('/modules/patients/view_visit.php?id=' . (int) $visit['visit_id'])) ?>" class="btn btn-sm btn-info">View</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -90,7 +90,7 @@ $visits = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php endif; ?>
 
                 <div class="mt-4">
-                    <a href="view_patient.php?id=<?= $patient_id ?>" class="btn btn-secondary">Back to Patient Details</a>
+                    <a href="<?= htmlspecialchars(appUrl('/modules/patients/view_patient.php?id=' . (int) $patient_id)) ?>" class="btn btn-secondary">Back to Patient Details</a>
                 </div>
 
             </div>

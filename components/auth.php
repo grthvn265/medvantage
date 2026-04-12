@@ -2,33 +2,130 @@
 
 declare(strict_types=1);
 
-const OWNER_DEFAULT_USERNAME = 'owner';
-const OWNER_DEFAULT_PASSWORD = 'Owner@12345';
+const SESSION_IDLE_TIMEOUT = 7200;
+
+function isHttpsRequest(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
+        return true;
+    }
+
+    $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    return $forwardedProto === 'https';
+}
 
 function startAuthSession(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        $cookieSecure = isHttpsRequest();
+        if (function_exists('env')) {
+            $cookieSecure = $cookieSecure || (bool) env('APP_FORCE_HTTPS', false);
+        }
+
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+
+        if ($cookieSecure) {
+            ini_set('session.cookie_secure', '1');
+        }
+
+        session_name('medvantage_session');
         session_start();
+
+        if (!isset($_SESSION['_initiated'])) {
+            session_regenerate_id(true);
+            $_SESSION['_initiated'] = time();
+        }
+
+        $lastSeen = (int) ($_SESSION['_last_seen'] ?? 0);
+        if ($lastSeen > 0 && (time() - $lastSeen) > SESSION_IDLE_TIMEOUT) {
+            $_SESSION = [];
+            session_regenerate_id(true);
+        }
+
+        $_SESSION['_last_seen'] = time();
     }
 }
 
 function getAppBasePath(): string
 {
-    $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
-    $trimmed = trim($scriptName, '/');
-
-    if ($trimmed === '') {
-        return '';
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
     }
 
-    $segments = explode('/', $trimmed);
-    return '/' . $segments[0];
+    $configuredUrl = $_SERVER['APP_URL'] ?? $_ENV['APP_URL'] ?? getenv('APP_URL');
+    if (is_string($configuredUrl) && trim($configuredUrl) !== '') {
+        $path = parse_url(trim($configuredUrl), PHP_URL_PATH);
+        if (is_string($path)) {
+            $trimmed = trim($path);
+            if ($trimmed === '' || $trimmed === '/') {
+                $cached = '';
+                return $cached;
+            }
+
+            $cached = '/' . trim($trimmed, '/');
+            return $cached;
+        }
+    }
+
+    $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    if ($scriptName === '') {
+        $cached = '';
+        return $cached;
+    }
+
+    $markers = ['/modules/', '/components/', '/setup/'];
+    foreach ($markers as $marker) {
+        $pos = strpos($scriptName, $marker);
+        if ($pos !== false) {
+            $base = rtrim(substr($scriptName, 0, $pos), '/');
+            $cached = $base === '' ? '' : $base;
+            return $cached;
+        }
+    }
+
+    if (str_ends_with($scriptName, '/index.php')) {
+        $base = rtrim(substr($scriptName, 0, -10), '/');
+        $cached = $base === '' ? '' : $base;
+        return $cached;
+    }
+
+    $dir = str_replace('\\', '/', dirname($scriptName));
+    if ($dir === '/' || $dir === '.' || $dir === '') {
+        $cached = '';
+        return $cached;
+    }
+
+    $cached = '/' . ltrim(trim($dir, '/'), '/');
+    return $cached;
 }
 
 function appUrl(string $path): string
 {
     $base = rtrim(getAppBasePath(), '/');
     return $base . '/' . ltrim($path, '/');
+}
+
+function canonicalRoutePath(string $path): string
+{
+    $normalized = '/' . ltrim(trim($path), '/');
+
+    $map = [
+        '/modules/auth/login.php' => '/login',
+        '/modules/auth/logout.php' => '/logout',
+        '/modules/dashboard/index.php' => '/dashboard',
+        '/modules/dashboard/reports.php' => '/dashboard/reports',
+        '/modules/patients/patients.php' => '/patients',
+        '/modules/doctors/doctors.php' => '/doctors',
+        '/modules/appointments/appointment.php' => '/appointments',
+        '/modules/billing/billing.php' => '/billing',
+        '/modules/users/users.php' => '/users',
+        '/modules/audit_log/audit_log.php' => '/audit-log',
+    ];
+
+    return $map[$normalized] ?? $normalized;
 }
 
 function currentRequestPath(): string
@@ -41,6 +138,18 @@ function currentRequestPath(): string
     }
 
     return '/' . ltrim($raw, '/');
+}
+
+function currentExecutedScriptPath(): string
+{
+    $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/');
+    $base = getAppBasePath();
+
+    if ($base !== '' && str_starts_with($script, $base)) {
+        $script = substr($script, strlen($base));
+    }
+
+    return '/' . ltrim($script, '/');
 }
 
 function getDefaultModules(): array
@@ -168,6 +277,37 @@ function ensureBaseRoles(PDO $pdo): void
     }
 }
 
+function getOwnerBootstrapConfig(): ?array
+{
+    if (!function_exists('env')) {
+        return null;
+    }
+
+    $username = trim((string) env('OWNER_BOOTSTRAP_USERNAME', ''));
+    $password = (string) env('OWNER_BOOTSTRAP_PASSWORD', '');
+
+    if ($username === '' || $password === '') {
+        return null;
+    }
+
+    $fullName = trim((string) env('OWNER_BOOTSTRAP_FULL_NAME', 'System Owner'));
+    if ($fullName === '') {
+        $fullName = 'System Owner';
+    }
+
+    $email = trim((string) env('OWNER_BOOTSTRAP_EMAIL', ''));
+    if ($email === '') {
+        $email = $username . '@local.invalid';
+    }
+
+    return [
+        'username' => $username,
+        'password' => $password,
+        'full_name' => $fullName,
+        'email' => $email,
+    ];
+}
+
 function ensureOwnerAccount(PDO $pdo): void
 {
     $count = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
@@ -183,23 +323,29 @@ function ensureOwnerAccount(PDO $pdo): void
         return;
     }
 
+    $ownerConfig = getOwnerBootstrapConfig();
+    if ($ownerConfig === null) {
+        error_log('Owner bootstrap skipped: OWNER_BOOTSTRAP_USERNAME and OWNER_BOOTSTRAP_PASSWORD are not set.');
+        return;
+    }
+
     $insertOwner = $pdo->prepare('
         INSERT INTO users (username, password_hash, full_name, email, role_id, is_active)
         VALUES (?, ?, ?, ?, ?, 1)
     ');
 
     $insertOwner->execute([
-        OWNER_DEFAULT_USERNAME,
-        password_hash(OWNER_DEFAULT_PASSWORD, PASSWORD_DEFAULT),
-        'System Owner',
-        'owner@medvantage.local',
+        $ownerConfig['username'],
+        password_hash($ownerConfig['password'], PASSWORD_DEFAULT),
+        $ownerConfig['full_name'],
+        $ownerConfig['email'],
         $superRoleId,
     ]);
 
     startAuthSession();
-    if (empty($_SESSION['owner_notice_shown'])) {
-        $_SESSION['owner_notice_shown'] = true;
-        $_SESSION['flash_success'] = 'Owner account generated. Username: ' . OWNER_DEFAULT_USERNAME . ' | Password: ' . OWNER_DEFAULT_PASSWORD;
+    if (empty($_SESSION['owner_bootstrap_notice_shown'])) {
+        $_SESSION['owner_bootstrap_notice_shown'] = true;
+        $_SESSION['flash_success'] = 'Initial owner account generated successfully. Please sign in and rotate credentials.';
     }
 }
 
@@ -254,7 +400,9 @@ function attemptLogin(PDO $pdo, string $username, string $password): bool
     }
 
     startAuthSession();
+    session_regenerate_id(true);
     $_SESSION['user_id'] = (int) $user['user_id'];
+    $_SESSION['_last_seen'] = time();
 
     $update = $pdo->prepare('UPDATE users SET last_login_at = NOW() WHERE user_id = ?');
     $update->execute([(int) $user['user_id']]);
@@ -269,7 +417,14 @@ function logoutCurrentUser(): void
 
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        setcookie(session_name(), '', [
+            'expires' => time() - 42000,
+            'path' => $params['path'] ?? '/',
+            'domain' => $params['domain'] ?? '',
+            'secure' => (bool) ($params['secure'] ?? false),
+            'httponly' => (bool) ($params['httponly'] ?? true),
+            'samesite' => 'Lax',
+        ]);
     }
 
     session_destroy();
@@ -279,27 +434,62 @@ function currentModuleKeyFromPath(?string $path = null): ?string
 {
     $routePath = $path ?? currentRequestPath();
 
-    if (!str_starts_with($routePath, '/modules/')) {
-        return null;
+    if (str_starts_with($routePath, '/modules/')) {
+        $segments = explode('/', trim($routePath, '/'));
+        if (!isset($segments[1])) {
+            return null;
+        }
+
+        $moduleCandidate = $segments[1];
+        if (in_array($moduleCandidate, ['auth'], true)) {
+            return null;
+        }
+
+        return $moduleCandidate;
     }
 
-    $segments = explode('/', trim($routePath, '/'));
-    if (!isset($segments[1])) {
-        return null;
+    $normalized = '/' . trim($routePath, '/');
+    if ($normalized === '/') {
+        $normalized = '/';
     }
 
-    $moduleCandidate = $segments[1];
-    if (in_array($moduleCandidate, ['auth'], true)) {
-        return null;
+    $aliasMap = [
+        '/dashboard' => 'dashboard',
+        '/patients' => 'patients',
+        '/doctors' => 'doctors',
+        '/appointments' => 'appointments',
+        '/billing' => 'billing',
+        '/users' => 'users',
+        '/audit-log' => 'audit_log',
+    ];
+
+    foreach ($aliasMap as $prefix => $moduleKey) {
+        if ($normalized === $prefix || str_starts_with($normalized, $prefix . '/')) {
+            return $moduleKey;
+        }
     }
 
-    return $moduleCandidate;
+    if ($path === null) {
+        $scriptPath = currentExecutedScriptPath();
+        if (str_starts_with($scriptPath, '/modules/')) {
+            $segments = explode('/', trim($scriptPath, '/'));
+            if (isset($segments[1]) && $segments[1] !== 'auth') {
+                return $segments[1];
+            }
+        }
+    }
+
+    return null;
 }
 
 function isAuthRoute(): bool
 {
     $path = currentRequestPath();
-    return str_starts_with($path, '/modules/auth/');
+    if ($path === '/login' || str_starts_with($path, '/login/')) {
+        return true;
+    }
+
+    return str_starts_with(currentExecutedScriptPath(), '/modules/auth/');
 }
 
 function isJsonRequest(): bool
@@ -356,7 +546,7 @@ function requireCurrentRouteAccess(PDO $pdo): void
         }
 
         $next = urlencode(currentRequestPath());
-        header('Location: ' . appUrl('/modules/auth/login.php?next=' . $next));
+        header('Location: ' . appUrl('/login?next=' . $next));
         exit;
     }
 
@@ -436,21 +626,21 @@ function getAccessibleModulesForUser(PDO $pdo, ?array $user): array
 
 function routePathToUrl(string $routePath): string
 {
-    return appUrl($routePath);
+    return appUrl(canonicalRoutePath($routePath));
 }
 
 function getLandingRouteForUser(PDO $pdo, ?array $user): string
 {
     if ($user === null) {
-        return '/modules/auth/login.php';
+        return '/login';
     }
 
     $modules = getAccessibleModulesForUser($pdo, $user);
     if (empty($modules)) {
-        return '/modules/auth/login.php';
+        return '/dashboard';
     }
 
-    return (string) $modules[0]['route_path'];
+    return canonicalRoutePath((string) $modules[0]['route_path']);
 }
 
 function consumeFlash(string $key): ?string

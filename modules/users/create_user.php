@@ -4,12 +4,14 @@ require '../../components/audit_log.php';
 
 $currentUser = getCurrentUser($pdo);
 if (!$currentUser || $currentUser['role_key'] !== 'super_admin') {
-    header('Location: ' . appUrl('/modules/dashboard/index.php?denied=1'));
+    header('Location: ' . appUrl('/dashboard?denied=1'));
     exit;
 }
 
+$usersUrl = appUrl('/users');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
@@ -24,31 +26,31 @@ $moduleIds = isset($_POST['module_ids']) && is_array($_POST['module_ids'])
 
 if ($fullName === '' || $username === '' || $password === '' || $roleId <= 0 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     setFlash('flash_error', 'Please complete all required fields with valid values.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
 if (strlen($fullName) < 2 || strlen($fullName) > 150 || !preg_match("/^[A-Za-z][A-Za-z\\s'\\-]{1,149}$/", $fullName)) {
     setFlash('flash_error', 'Full name must be 2-150 characters and contain letters, spaces, apostrophes, or hyphens only.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
 if (strlen($email) > 150) {
     setFlash('flash_error', 'Email must be 150 characters or fewer.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
 if (!preg_match('/^[A-Za-z0-9_.]{4,30}$/', $username)) {
     setFlash('flash_error', 'Username must be 4-30 characters and use letters, numbers, underscore, or dot.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
 if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,72}$/', $password)) {
     setFlash('flash_error', 'Password must be 8-72 characters and include uppercase, lowercase, number, and special character.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
@@ -58,13 +60,13 @@ $roleKey = $roleStmt->fetchColumn();
 
 if (!$roleKey || $roleKey === 'super_admin') {
     setFlash('flash_error', 'Only non-super-admin accounts can be created from this page.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
 if (count($moduleIds) === 0) {
     setFlash('flash_error', 'Select at least one module for this account.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
@@ -72,7 +74,7 @@ $existingEmailStmt = $pdo->prepare('SELECT 1 FROM users WHERE LOWER(email) = LOW
 $existingEmailStmt->execute([$email]);
 if ($existingEmailStmt->fetchColumn()) {
     setFlash('flash_error', 'Email already exists. Please use a different email address.');
-    header('Location: users.php');
+    header('Location: ' . $usersUrl);
     exit;
 }
 
@@ -83,7 +85,7 @@ $validLookup = array_fill_keys($validModuleIds, true);
 foreach ($moduleIds as $moduleId) {
     if (!isset($validLookup[$moduleId])) {
         setFlash('flash_error', 'One or more selected modules are invalid.');
-        header('Location: users.php');
+        header('Location: ' . $usersUrl);
         exit;
     }
 }
@@ -134,5 +136,5 @@ try {
     }
 }
 
-header('Location: users.php');
+header('Location: ' . $usersUrl);
 exit;

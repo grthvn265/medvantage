@@ -137,7 +137,7 @@ $flashError = consumeFlash('flash_error');
                             </td>
                             <td>
                                 <?php if ($user['role_key'] !== 'super_admin' && $user['username'] !== 'owner'): ?>
-                                    <form method="POST" action="toggle_user_status.php" class="d-inline">
+                                    <form method="POST" action="<?= htmlspecialchars(appUrl('/modules/users/toggle_user_status.php')) ?>" class="d-inline">
                                         <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                         <input type="hidden" name="current_status" value="<?= (int) $user['is_active'] ?>">
                                         <button type="submit" class="btn btn-sm <?= (int) $user['is_active'] === 1 ? 'btn-outline-danger' : 'btn-outline-success' ?>"
@@ -161,7 +161,7 @@ $flashError = consumeFlash('flash_error');
 <div class="modal fade" id="createUserModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="POST" action="create_user.php" id="createUserForm">
+            <form method="POST" action="<?= htmlspecialchars(appUrl('/modules/users/create_user.php')) ?>" id="createUserForm">
                 <div class="modal-header">
                     <h5 class="modal-title">Create New Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -344,7 +344,7 @@ $flashError = consumeFlash('flash_error');
             setEmailAvailabilityStatus('Checking email availability.....', 'text-muted');
 
             try {
-                const response = await fetch('check_email_availability.php?email=' + encodeURIComponent(email), {
+                const response = await fetch('<?= htmlspecialchars(appUrl('/modules/users/check_email_availability.php')) ?>?email=' + encodeURIComponent(email), {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'

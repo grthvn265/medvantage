@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $landingRoute = getLandingRouteForUser($pdo, $activeUser);
         $next = (string) ($_POST['next'] ?? '');
 
-        if ($activeUser && $next !== '' && str_starts_with($next, '/modules/')) {
+        if ($activeUser && $next !== '' && str_starts_with($next, '/')) {
             $nextModule = currentModuleKeyFromPath($next);
             if ($nextModule === null || userCanAccessModule($pdo, (int) $activeUser['user_id'], $activeUser['role_key'], $nextModule)) {
                 header('Location: ' . appUrl($next));

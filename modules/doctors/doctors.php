@@ -139,19 +139,19 @@ $doctors = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <td><?= date('M d, Y', strtotime($doctor['created_at'])) ?></td>
     <td>
         <?php if (!$show_archived): ?>
-        <a href="view_doctor.php?id=<?= $doctor['doctor_id'] ?>" class="btn btn-info btn-sm">View</a>
-        <a href="doctor_archive_handler.php?action=archive&id=<?= $doctor['doctor_id'] ?>" 
+        <a href="<?= htmlspecialchars(appUrl('/modules/doctors/view_doctor.php?id=' . (int) $doctor['doctor_id'])) ?>" class="btn btn-info btn-sm">View</a>
+          <a href="<?= htmlspecialchars(appUrl('/modules/doctors/doctor_archive_handler.php?action=archive&id=' . (int) $doctor['doctor_id'])) ?>" 
            class="btn btn-secondary btn-sm"
            onclick="return confirm('Archive this doctor?')">
            Archive
         </a>
         <?php else: ?>
-        <a href="doctor_archive_handler.php?action=restore&id=<?= $doctor['doctor_id'] ?>" 
+          <a href="<?= htmlspecialchars(appUrl('/modules/doctors/doctor_archive_handler.php?action=restore&id=' . (int) $doctor['doctor_id'])) ?>" 
            class="btn btn-info btn-sm"
            onclick="return confirm('Are you sure you want to restore this doctor?');">
            Restore
         </a>
-        <a href="doctor_archive_handler.php?action=permanently_delete&id=<?= $doctor['doctor_id'] ?>" 
+          <a href="<?= htmlspecialchars(appUrl('/modules/doctors/doctor_archive_handler.php?action=permanently_delete&id=' . (int) $doctor['doctor_id'])) ?>" 
            class="btn btn-danger btn-sm"
            onclick="return confirm('Permanently delete? This cannot be undone.')">
            Delete
@@ -625,7 +625,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
         
         try {
-            const response = await fetch('add_doctor.php', {
+            const response = await fetch('<?= htmlspecialchars(appUrl('/modules/doctors/add_doctor.php')) ?>', {
                 method: 'POST',
                 body: formData
             });

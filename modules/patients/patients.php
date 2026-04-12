@@ -150,20 +150,20 @@ $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td><?= date('M d, Y', strtotime($row['registered_date'])) ?></td>
                             <td>
                                 <?php if (!$show_archived): ?>
-                                    <a href="view_patient.php?id=<?= $row['patient_id'] ?>" class="btn btn-info btn-sm">View</a>
+                                    <a href="<?= htmlspecialchars(appUrl('/modules/patients/view_patient.php?id=' . (int) $row['patient_id'])) ?>" class="btn btn-info btn-sm">View</a>
                                 
-                                <a href="patient_archive_handler.php?action=archive&id=<?= $row['patient_id'] ?>" 
+                                          <a href="<?= htmlspecialchars(appUrl('/modules/patients/patient_archive_handler.php?action=archive&id=' . (int) $row['patient_id'])) ?>" 
                                    class="btn btn-secondary btn-sm"
                                    onclick="return confirm('Archive this patient?');">
                                    Archive
                                 </a>
                                 <?php else: ?>
-                                <a href="patient_archive_handler.php?action=restore&id=<?= $row['patient_id'] ?>" 
+                                          <a href="<?= htmlspecialchars(appUrl('/modules/patients/patient_archive_handler.php?action=restore&id=' . (int) $row['patient_id'])) ?>" 
                                    class="btn btn-info btn-sm"
                                    onclick="return confirm('Are you sure you want to restore this patient?');">
                                    Restore
                                 </a>
-                                <a href="patient_archive_handler.php?action=permanently_delete&id=<?= $row['patient_id'] ?>" 
+                                          <a href="<?= htmlspecialchars(appUrl('/modules/patients/patient_archive_handler.php?action=permanently_delete&id=' . (int) $row['patient_id'])) ?>" 
                                    class="btn btn-danger btn-sm"
                                    onclick="return confirm('Permanently delete? This cannot be undone.');"
                                    style="white-space: nowrap;">
@@ -600,7 +600,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
         
         try {
-            const response = await fetch('add_patient.php', {
+            const response = await fetch('<?= htmlspecialchars(appUrl('/modules/patients/add_patient.php')) ?>', {
                 method: 'POST',
                 body: formData
             });

@@ -14,5 +14,5 @@ if ($activeUser) {
 }
 
 logoutCurrentUser();
-header('Location: ' . appUrl('/modules/auth/login.php'));
+header('Location: ' . appUrl('/login'));
 exit;

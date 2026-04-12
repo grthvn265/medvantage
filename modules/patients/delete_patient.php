@@ -3,14 +3,14 @@ require '../../components/db.php';
 require '../../components/audit_log.php';
 
 if (!isset($_GET['id'])) {
-    header("Location: patients.php?error=" . urlencode("No patient ID provided"));
+    header('Location: ' . appUrl('/patients?error=' . urlencode('No patient ID provided')));
     exit;
 }
 
 $patient_id = (int) $_GET['id'];
 
 if ($patient_id <= 0) {
-    header("Location: patients.php?error=" . urlencode("Invalid patient ID"));
+    header('Location: ' . appUrl('/patients?error=' . urlencode('Invalid patient ID')));
     exit;
 }
 
@@ -19,7 +19,7 @@ try {
     $stmt = $pdo->prepare("SELECT patient_id FROM patients WHERE patient_id = ?");
     $stmt->execute([$patient_id]);
     if (!$stmt->fetch()) {
-        header("Location: patients.php?error=" . urlencode("Patient not found"));
+        header('Location: ' . appUrl('/patients?error=' . urlencode('Patient not found')));
         exit;
     }
 
@@ -33,10 +33,10 @@ try {
 
     logAudit($pdo, 'DELETE', 'patients', $patient_id, 'Deleted patient record');
 
-    header("Location: patients.php?deleted=1");
+    header('Location: ' . appUrl('/patients?deleted=1'));
     exit;
 
 } catch (PDOException $e) {
-    header("Location: patients.php?error=" . urlencode("Database error. Failed to delete patient."));
+    header('Location: ' . appUrl('/patients?error=' . urlencode('Database error. Failed to delete patient.')));
     exit;
 }

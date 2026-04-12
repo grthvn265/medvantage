@@ -18,7 +18,7 @@ if ($appointment_time && strpos($appointment_time, '-') !== false) {
 
 // Validate required fields
 if (!$patient_id || !$doctor_id || !$appointment_date || !$appointment_time) {
-    header("Location: appointment.php?error=" . urlencode("Missing required fields"));
+    header('Location: ' . appUrl('/appointments?error=' . urlencode('Missing required fields')));
     exit;
 }
 
@@ -107,10 +107,10 @@ try {
     $appointmentId = (int) $pdo->lastInsertId();
     logAudit($pdo, 'CREATE', 'appointments', $appointmentId, 'Created appointment');
 
-    header("Location: appointment.php?success=1");
+    header('Location: ' . appUrl('/appointments?success=1'));
     exit;
 
 } catch (Exception $e) {
-    header("Location: appointment.php?error=" . urlencode($e->getMessage()));
+    header('Location: ' . appUrl('/appointments?error=' . urlencode($e->getMessage())));
     exit;
 }
