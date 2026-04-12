@@ -249,10 +249,14 @@ function getAppointmentsReport($fields, $pdo) {
     
     $data = [];
     foreach ($appointments as $appt) {
-        // Format appointment_time to 12-hour format
+        // Format appointment_time to 12-hour range format
         if (!empty($appt['appointment_time'])) {
             $time = $appt['appointment_time'];
-            $appt['appointment_time'] = date('g:ia', strtotime($time));
+            $hour = (int)substr($time, 0, 2);
+            $startTime = date('g:ia', strtotime($time));
+            $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+            $endTime = date('g:ia', strtotime($endHour . ':00'));
+            $appt['appointment_time'] = $startTime . ' - ' . $endTime;
         }
         $row = [];
         foreach ($fields as $field) {

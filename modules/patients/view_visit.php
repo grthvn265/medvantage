@@ -50,7 +50,19 @@ if (!$visit) {
                 <p><strong>Visit ID:</strong> <?= $visit['visit_id'] ?></p>
                 <p><strong>Patient:</strong> <?= $visit['p_fname'] . " " . $visit['p_lname'] ?></p>
                 <p><strong>Doctor:</strong> <?= $visit['d_fname'] . " " . $visit['d_lname'] ?></p>
-                <p><strong>Date & Time:</strong> <?= $visit['visit_datetime'] ?></p>
+                <?php
+                    // Format date and time
+                    $dateTime = new DateTime($visit['visit_datetime']);
+                    $formattedDate = $dateTime->format('F d, Y'); // e.g., "May 26, 2026"
+                    $hour = (int)$dateTime->format('H');
+                    $startTime = $dateTime->format('g:i A'); // e.g., "11:00 AM"
+                    $endHour = $hour + 1;
+                    $endDateTime = clone $dateTime;
+                    $endDateTime->setTime($endHour, 0);
+                    $endTime = $endDateTime->format('g:i A'); // e.g., "12:00 PM"
+                    $timeRange = $startTime . ' - ' . $endTime;
+                ?>
+                <p><strong>Date & Time:</strong> <?= $formattedDate ?> at <?= $timeRange ?></p>
 
                 <hr>
 

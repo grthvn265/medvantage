@@ -316,12 +316,16 @@ foreach ($days as $day):
 <?php
 $times = ['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
 foreach ($times as $time):
+    $hour = (int)substr($time, 0, 2);
     $startTime = date('g:ia', strtotime($time));
+    $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+    $endTime = date('g:ia', strtotime($endHour . ':00'));
+    $timeRange = $startTime . ' - ' . $endTime;
 ?>
 <div class="col-md-3">
     <div class="form-check">
         <input type="checkbox" name="available_times[]" value="<?= $time ?>" class="form-check-input" id="time_<?= str_replace(':', '', $time) ?>">
-        <label class="form-check-label" for="time_<?= str_replace(':', '', $time) ?>"><?= $startTime ?></label>
+        <label class="form-check-label" for="time_<?= str_replace(':', '', $time) ?>"><?= $timeRange ?></label>
     </div>
 </div>
 <?php endforeach; ?>

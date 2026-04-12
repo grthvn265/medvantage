@@ -98,8 +98,16 @@ function timeSlots() {
 }
 
 function formatTimeSlot($timeStr) {
-    // Convert stored time (e.g., "10:00") to 12-hour format (e.g., "10:00am")
-    return date('g:ia', strtotime($timeStr));
+    // Convert stored time (e.g., "10:00") to hourly range format with 12-hour time
+    if (strpos($timeStr, '-') !== false) {
+        return $timeStr; // Already in range format
+    }
+    // Extract hour from time string
+    $hour = (int)substr($timeStr, 0, 2);
+    $startTime = date('g:ia', strtotime($timeStr));
+    $endHour = $hour + 1;
+    $endTime = date('g:ia', strtotime(str_pad($endHour, 2, '0', STR_PAD_LEFT) . ':00'));
+    return $startTime . ' - ' . $endTime;
 }
 
 function convertTo12Hour($time24) {
@@ -108,8 +116,12 @@ function convertTo12Hour($time24) {
 }
 
 function getTimeRangeDisplay($time24) {
-    // Convert 24-hour time to 12-hour format (e.g., "13:00" -> "1:00pm")
-    return date('g:ia', strtotime($time24));
+    // Convert 24-hour time to 12-hour range format (e.g., "13:00" -> "1:00pm - 2:00pm")
+    $hour = (int)substr($time24, 0, 2);
+    $startTime = convertTo12Hour($time24);
+    $endHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
+    $endTime = convertTo12Hour($endHour . ':00');
+    return $startTime . ' - ' . $endTime;
 }
 ?>
 
@@ -507,18 +519,18 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 </div>
 
 <div class="col-md-6">
-    <label class="form-label">Visit Time (Hour) <span class="text-danger">*</span></label>
+    <label class="form-label">Visit Time (Hourly Slot) <span class="text-danger">*</span></label>
     <select id="visitTime" class="form-select" disabled>
         <option value="">Select Hour</option>
-        <option value="10">10:00 AM</option>
-        <option value="11">11:00 AM</option>
-        <option value="12">12:00 PM</option>
-        <option value="13">1:00 PM</option>
-        <option value="14">2:00 PM</option>
-        <option value="15">3:00 PM</option>
-        <option value="16">4:00 PM</option>
-        <option value="17">5:00 PM</option>
-        <option value="18">6:00 PM</option>
+        <option value="10">10:00 AM - 11:00 AM</option>
+        <option value="11">11:00 AM - 12:00 PM</option>
+        <option value="12">12:00 PM - 1:00 PM</option>
+        <option value="13">1:00 PM - 2:00 PM</option>
+        <option value="14">2:00 PM - 3:00 PM</option>
+        <option value="15">3:00 PM - 4:00 PM</option>
+        <option value="16">4:00 PM - 5:00 PM</option>
+        <option value="17">5:00 PM - 6:00 PM</option>
+        <option value="18">6:00 PM - 7:00 PM</option>
     </select>
     <input type="hidden" id="visitTimeHidden" name="visit_time" required>
     <small class="text-danger d-none" data-error="visit_time"></small>
@@ -817,9 +829,20 @@ async function fetchAvailableTimes(doctorId, date) {
         // Populate time dropdown with available times
         let html = '<option value="">Select Time</option>';
         data.times.forEach(time => {
-            // time is in format "10:00|10:00am"
-            const [value, display] = time.split('|');
-            html += `<option value="${value}">${display}</option>`;
+            // time is in format "10:00", convert to range for display
+            const hour = parseInt(time.substring(0, 2));
+            const startTime = time; // Already in 24-hour format
+            const endHour = String(hour + 1).padStart(2, '0');
+            const endTime = endHour + ':00';
+            
+            // Convert to 12-hour format for display
+            const startDate = new Date(`2000-01-01T${startTime}:00`);
+            const endDate = new Date(`2000-01-01T${endTime}:00`);
+            const startDisplay = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const endDisplay = endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const rangeDisplay = startDisplay + ' - ' + endDisplay;
+            
+            html += `<option value="${time}">${rangeDisplay}</option>`;
         });
 
         elements.appointmentTime.innerHTML = html;

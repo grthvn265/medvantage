@@ -10,7 +10,11 @@ $appointment_time = isset($_POST['appointment_time']) ? $_POST['appointment_time
 $reason = isset($_POST['reason']) ? $_POST['reason'] : null;
 $status = 'Scheduled'; // New appointments are always Scheduled
 
-// Time is stored as-is (e.g., "10:00")
+// Extract start time from hourly range (e.g., "10:00-11:00" -> "10:00")
+if ($appointment_time && strpos($appointment_time, '-') !== false) {
+    $timeRange = explode('-', $appointment_time);
+    $appointment_time = trim($timeRange[0]);
+}
 
 // Validate required fields
 if (!$patient_id || !$doctor_id || !$appointment_date || !$appointment_time) {

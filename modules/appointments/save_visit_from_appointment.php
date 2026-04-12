@@ -26,9 +26,18 @@ function validateDate($date) {
     return true;
 }
 
-function validateHour($hour) {
-    $hour = (int)$hour;
-    return $hour >= 10 && $hour <= 18;
+function validateTimeSlot($time) {
+    // Validate time - can be just hour (10-18) or HH:MM format
+    if (preg_match('/^\d{2}:\d{2}$/', $time)) {
+        // HH:MM format
+        $hour = (int)substr($time, 0, 2);
+        return $hour >= 10 && $hour <= 18;
+    } elseif (preg_match('/^\d{1,2}$/', $time)) {
+        // Just hour number
+        $hour = (int)$time;
+        return $hour >= 10 && $hour <= 18;
+    }
+    return false;
 }
 
 /* ==============================
@@ -83,10 +92,10 @@ if (empty($visit_date)) {
 }
 
 if (empty($visit_time)) {
-    $errors['visit_time'] = "Visit time is required";
+    $errors['visit_time'] = "Visit time slot is required";
 } else {
-    if (!validateHour($visit_time)) {
-        $errors['visit_time'] = "Invalid time";
+    if (!validateTimeSlot($visit_time)) {
+        $errors['visit_time'] = "Invalid time format. Expected HH:MM (e.g., 10:00)";
     }
 }
 
@@ -145,8 +154,14 @@ if (!empty($errors)) {
 try {
     $pdo->beginTransaction();
 
-    // Create visit datetime
-    $visit_datetime = $visit_date . ' ' . str_pad($visit_time, 2, '0', STR_PAD_LEFT) . ':00:00';
+    // Convert hour-only format to HH:MM format if needed
+    $visit_time_formatted = $visit_time;
+    if (preg_match('/^\d{1,2}$/', $visit_time)) {
+        $visit_time_formatted = str_pad($visit_time, 2, '0', STR_PAD_LEFT) . ':00';
+    }
+
+    // Create visit datetime from date and time slot (HH:MM format)
+    $visit_datetime = $visit_date . ' ' . $visit_time_formatted;
 
     // Insert visit
     $stmt = $pdo->prepare("
