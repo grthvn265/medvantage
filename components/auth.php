@@ -22,7 +22,15 @@ function getAppBasePath(): string
     }
 
     $segments = explode('/', $trimmed);
-    return '/' . $segments[0];
+    $first = strtolower($segments[0] ?? '');
+
+    // App routes can resolve directly to internal folders on root-hosted installs.
+    // In that case, there is no URL base path prefix.
+    if (in_array($first, ['index.php', 'modules', 'components', 'assets', 'setup'], true)) {
+        return '';
+    }
+
+    return '/' . ($segments[0] ?? '');
 }
 
 function appUrl(string $path): string
@@ -34,6 +42,14 @@ function appUrl(string $path): string
 function currentRequestPath(): string
 {
     $raw = str_replace('\\', '/', parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+
+    // Normalize legacy front-controller style paths.
+    if ($raw === '/index.php') {
+        $raw = '/';
+    } elseif (str_starts_with($raw, '/index.php/')) {
+        $raw = substr($raw, strlen('/index.php'));
+    }
+
     $base = getAppBasePath();
 
     if ($base !== '' && str_starts_with($raw, $base)) {
@@ -299,7 +315,9 @@ function currentModuleKeyFromPath(?string $path = null): ?string
 function isAuthRoute(): bool
 {
     $path = currentRequestPath();
-    return str_starts_with($path, '/modules/auth/');
+    return str_starts_with($path, '/modules/auth/')
+        || $path === '/login'
+        || $path === '/logout';
 }
 
 function isJsonRequest(): bool
@@ -356,7 +374,7 @@ function requireCurrentRouteAccess(PDO $pdo): void
         }
 
         $next = urlencode(currentRequestPath());
-        header('Location: ' . appUrl('/modules/auth/login.php?next=' . $next));
+        header('Location: ' . appUrl('/login?next=' . $next));
         exit;
     }
 
@@ -442,12 +460,12 @@ function routePathToUrl(string $routePath): string
 function getLandingRouteForUser(PDO $pdo, ?array $user): string
 {
     if ($user === null) {
-        return '/modules/auth/login.php';
+        return '/login';
     }
 
     $modules = getAccessibleModulesForUser($pdo, $user);
     if (empty($modules)) {
-        return '/modules/auth/login.php';
+        return '/dashboard';
     }
 
     return (string) $modules[0]['route_path'];
