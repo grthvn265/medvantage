@@ -564,10 +564,9 @@ function buildAuditLogDocumentMarkup() {
 }
 
 async function logAuditLogPrintAction() {
-    const printLogEndpoint = "<?= htmlspecialchars(appUrl('/modules/audit_log/audit_log.php')) ?>";
+    const printLogEndpoint = "<?= htmlspecialchars(appUrl('/audit-log')) ?>";
     const printLogPayload = new URLSearchParams({
         action: 'log_print',
-        module: 'audit_log',
         description: 'Printed audit log report'
     });
 
@@ -582,15 +581,15 @@ async function logAuditLogPrintAction() {
             credentials: 'same-origin'
         });
 
-        if (!printLogResponse.ok) {
-            const rawBody = await printLogResponse.text();
-            let parsedBody = rawBody;
-            try {
-                parsedBody = JSON.parse(rawBody);
-            } catch (_) {
-                // Keep raw body when response is not JSON.
-            }
+        const rawBody = await printLogResponse.text();
+        let parsedBody = null;
+        try {
+            parsedBody = JSON.parse(rawBody);
+        } catch (_) {
+            // Keep parsedBody as null when response is not JSON.
+        }
 
+        if (!printLogResponse.ok || !parsedBody || parsedBody.success !== true) {
             console.error('Failed to log audit log print action (EXACT)', {
                 status: printLogResponse.status,
                 statusText: printLogResponse.statusText,
