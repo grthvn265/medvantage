@@ -120,6 +120,7 @@ $actionBadgeClass = [
     'PERMANENTLY_DELETED' => 'bg-dark',
     'LOGIN'               => 'bg-teal text-white',
     'LOGOUT'              => 'bg-warning text-dark',
+    'PRINT'               => 'bg-info text-dark',
     'ACTIVATE'            => 'bg-success',
     'DEACTIVATE'          => 'bg-danger',
     'CANCEL'              => 'bg-warning text-dark',
@@ -529,6 +530,25 @@ function printAuditLogReport() {
         alert('No data to print.');
         return;
     }
+
+        const printLogEndpoint = "<?= htmlspecialchars(appUrl('/components/log_print.php')) ?>";
+        const printLogPayload = new URLSearchParams({
+            module: 'audit_log',
+            description: 'Printed audit log report'
+        }).toString();
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(printLogEndpoint, new Blob([printLogPayload], {
+                type: 'application/x-www-form-urlencoded;charset=UTF-8'
+            }));
+        } else {
+            fetch(printLogEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: printLogPayload,
+                keepalive: true
+            }).catch(() => {});
+        }
 
     const printWindow = window.open('', '', 'height=700,width=1200');
     if (!printWindow) {

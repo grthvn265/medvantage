@@ -1071,6 +1071,25 @@ $reportSystemName = 'MedVantage';
             return;
         }
 
+            const printLogEndpoint = "<?= htmlspecialchars(appUrl('/components/log_print.php')) ?>";
+            const printLogPayload = new URLSearchParams({
+                module: 'dashboard',
+                description: 'Printed dashboard report'
+            }).toString();
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(printLogEndpoint, new Blob([printLogPayload], {
+                    type: 'application/x-www-form-urlencoded;charset=UTF-8'
+                }));
+            } else {
+                fetch(printLogEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: printLogPayload,
+                    keepalive: true
+                }).catch(() => {});
+            }
+
         const printWindow = window.open('', '', 'height=700,width=1200');
         if (!printWindow) {
             alert('Unable to open the print preview window. Please allow pop-ups and try again.');
