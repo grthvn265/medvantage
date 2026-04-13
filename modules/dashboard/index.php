@@ -1,7 +1,27 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 $reportUser = getCurrentUser($pdo);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'log_print')) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    if (!$reportUser) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+
+    $description = isset($_POST['description']) && trim((string) $_POST['description']) !== ''
+        ? trim((string) $_POST['description'])
+        : 'Printed dashboard report';
+
+    logAudit($pdo, 'PRINT', 'dashboard', null, $description);
+    echo json_encode(['success' => true]);
+    exit;
+}
+
 $reportGeneratedBy = $reportUser['full_name'] ?? $reportUser['username'] ?? 'System User';
 $reportLogoUrl = appUrl('/components/logo.png');
 $reportSystemName = 'MedVantage';
@@ -1065,30 +1085,48 @@ $reportSystemName = 'MedVantage';
         URL.revokeObjectURL(url);
     }
 
-    function printReport() {
+    async function printReport() {
         if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
             alert('No data to print. Generate a report first.');
             return;
         }
 
-            const printLogEndpoint = "<?= htmlspecialchars(appUrl('/components/log_print.php')) ?>";
-            const printLogPayload = new URLSearchParams({
-                module: 'dashboard',
-                description: 'Printed dashboard report'
-            }).toString();
+        const printLogEndpoint = "<?= htmlspecialchars(appUrl('/modules/dashboard/index.php')) ?>";
+        const printLogPayload = new URLSearchParams({
+            action: 'log_print',
+            module: 'dashboard',
+            description: 'Printed dashboard report'
+        });
 
-            if (navigator.sendBeacon) {
-                navigator.sendBeacon(printLogEndpoint, new Blob([printLogPayload], {
-                    type: 'application/x-www-form-urlencoded;charset=UTF-8'
-                }));
-            } else {
-                fetch(printLogEndpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                    body: printLogPayload,
-                    keepalive: true
-                }).catch(() => {});
+        try {
+            const printLogResponse = await fetch(printLogEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: printLogPayload,
+                credentials: 'same-origin'
+            });
+
+            if (!printLogResponse.ok) {
+                const rawBody = await printLogResponse.text();
+                let parsedBody = rawBody;
+                try {
+                    parsedBody = JSON.parse(rawBody);
+                } catch (_) {
+                    // Keep raw body when response is not JSON.
+                }
+
+                console.error('Failed to log dashboard print action', {
+                    status: printLogResponse.status,
+                    statusText: printLogResponse.statusText,
+                    body: parsedBody
+                });
             }
+        } catch (error) {
+            console.error('Network error while logging dashboard print action', error);
+        }
 
         const printWindow = window.open('', '', 'height=700,width=1200');
         if (!printWindow) {

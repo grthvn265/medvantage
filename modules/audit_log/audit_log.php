@@ -1,9 +1,22 @@
 <?php
 require '../../components/db.php';
+require '../../components/audit_log.php';
 
 $currentUser = getCurrentUser($pdo);
 if (!$currentUser || $currentUser['role_key'] !== 'super_admin') {
     header('Location: ' . appUrl('/modules/dashboard/index.php?denied=1'));
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'log_print')) {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $description = isset($_POST['description']) && trim((string) $_POST['description']) !== ''
+        ? trim((string) $_POST['description'])
+        : 'Printed audit log report';
+
+    logAudit($pdo, 'PRINT', 'audit_log', null, $description);
+    echo json_encode(['success' => true]);
     exit;
 }
 
@@ -525,29 +538,47 @@ function buildAuditLogDocumentMarkup() {
     `;
 }
 
-function printAuditLogReport() {
+async function printAuditLogReport() {
     if (!auditLogRows || auditLogRows.length === 0) {
         alert('No data to print.');
         return;
     }
 
-        const printLogEndpoint = "<?= htmlspecialchars(appUrl('/components/log_print.php')) ?>";
+        const printLogEndpoint = "<?= htmlspecialchars(appUrl('/modules/audit_log/audit_log.php')) ?>";
         const printLogPayload = new URLSearchParams({
+            action: 'log_print',
             module: 'audit_log',
             description: 'Printed audit log report'
-        }).toString();
+        });
 
-        if (navigator.sendBeacon) {
-            navigator.sendBeacon(printLogEndpoint, new Blob([printLogPayload], {
-                type: 'application/x-www-form-urlencoded;charset=UTF-8'
-            }));
-        } else {
-            fetch(printLogEndpoint, {
+        try {
+            const printLogResponse = await fetch(printLogEndpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: printLogPayload,
-                keepalive: true
-            }).catch(() => {});
+                credentials: 'same-origin'
+            });
+
+            if (!printLogResponse.ok) {
+                const rawBody = await printLogResponse.text();
+                let parsedBody = rawBody;
+                try {
+                    parsedBody = JSON.parse(rawBody);
+                } catch (_) {
+                    // Keep raw body when response is not JSON.
+                }
+
+                console.error('Failed to log audit log print action', {
+                    status: printLogResponse.status,
+                    statusText: printLogResponse.statusText,
+                    body: parsedBody
+                });
+            }
+        } catch (error) {
+            console.error('Network error while logging audit log print action', error);
         }
 
     const printWindow = window.open('', '', 'height=700,width=1200');
