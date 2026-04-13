@@ -8,27 +8,19 @@ if (!$currentUser || $currentUser['role_key'] !== 'super_admin') {
     exit;
 }
 
-if (($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print' || ($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print_beacon') {
+if (($_POST['action'] ?? '') === 'log_print') {
     $requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-    if ($requestMethod !== 'POST' && $requestMethod !== 'GET') {
+    if ($requestMethod !== 'POST') {
         http_response_code(405);
         exit;
     }
 
-    $isBeacon = (($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print_beacon');
-
-    if (!$isBeacon) {
-        header('Content-Type: application/json; charset=utf-8');
-    }
+    header('Content-Type: application/json; charset=utf-8');
 
     $userId = (int) ($currentUser['user_id'] ?? 0);
     if ($userId <= 0) {
-        if (!$isBeacon) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'message' => 'Invalid session user']);
-        } else {
-            http_response_code(401);
-        }
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Invalid session user']);
         exit;
     }
 
@@ -39,23 +31,17 @@ if (($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print' || ($_POST['acti
 
     $logged = logAudit($pdo, 'PRINT', 'audit_log', null, $description);
     if (!$logged) {
-        if (!$isBeacon) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Failed to write print audit log',
-            ]);
-        } else {
-            http_response_code(500);
-        }
+        $exactError = getLastAuditError() ?? 'Unknown audit logging failure';
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to write print audit log',
+            'error' => $exactError,
+        ]);
         exit;
     }
 
-    if (!$isBeacon) {
-        echo json_encode(['success' => true]);
-    } else {
-        http_response_code(204);
-    }
+    echo json_encode(['success' => true]);
     exit;
 }
 
@@ -585,8 +571,6 @@ async function logAuditLogPrintAction() {
         description: 'Printed audit log report'
     });
 
-    let logged = false;
-
     try {
         const printLogResponse = await fetch(printLogEndpoint, {
             method: 'POST',
@@ -598,9 +582,7 @@ async function logAuditLogPrintAction() {
             credentials: 'same-origin'
         });
 
-        if (printLogResponse.ok) {
-            logged = true;
-        } else {
+        if (!printLogResponse.ok) {
             const rawBody = await printLogResponse.text();
             let parsedBody = rawBody;
             try {
@@ -609,41 +591,15 @@ async function logAuditLogPrintAction() {
                 // Keep raw body when response is not JSON.
             }
 
-            console.error('Failed to log audit log print action', {
+            console.error('Failed to log audit log print action (EXACT)', {
                 status: printLogResponse.status,
                 statusText: printLogResponse.statusText,
-                body: parsedBody
+                rawBody,
+                parsedBody
             });
         }
     } catch (error) {
         console.error('Network error while logging audit log print action', error);
-    }
-
-    if (!logged) {
-        const beaconParams = new URLSearchParams({
-            action: 'log_print_beacon',
-            module: 'audit_log',
-            description: 'Printed audit log report',
-            _: String(Date.now())
-        });
-        const beaconUrl = `${printLogEndpoint}?${beaconParams.toString()}`;
-
-        try {
-            const beaconResponse = await fetch(beaconUrl, {
-                method: 'GET',
-                credentials: 'same-origin',
-                cache: 'no-store'
-            });
-
-            if (!beaconResponse.ok) {
-                console.error('Fallback print log beacon failed', {
-                    status: beaconResponse.status,
-                    statusText: beaconResponse.statusText
-                });
-            }
-        } catch (beaconError) {
-            console.error('Network error on fallback print log beacon', beaconError);
-        }
     }
 }
 

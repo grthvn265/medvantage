@@ -2,16 +2,19 @@
 
 declare(strict_types=1);
 
+function setLastAuditError(?string $message): void
+{
+    $GLOBALS['__last_audit_error'] = $message;
+}
+
+function getLastAuditError(): ?string
+{
+    $value = $GLOBALS['__last_audit_error'] ?? null;
+    return is_string($value) && $value !== '' ? $value : null;
+}
+
 /**
- * Write a single audit log entry.
- *
- * @param PDO         $pdo         Active database connection.
- * @param string      $action      Short action label: CREATE, UPDATE, DELETE, ARCHIVE,
- *                                 RESTORE, PERMANENTLY_DELETED, LOGIN, LOGOUT,
- *                                 ACTIVATE, DEACTIVATE, CANCEL, BLOCK_DATE, UNBLOCK_DATE.
- * @param string      $module      Module name matching app_modules.module_key.
- * @param int|null    $entityId    PK of the affected record (null when not applicable).
- * @param string      $description Human-readable description of what happened.
+ * Ensure audit_logs.action accepts PRINT and other dynamic action values.
  */
 function ensureAuditActionColumnSupportsPrint(PDO $pdo): void
 {
@@ -39,9 +42,14 @@ function ensureAuditActionColumnSupportsPrint(PDO $pdo): void
     $checked = true;
 }
 
+/**
+ * Write a single audit log entry.
+ */
 function logAudit(PDO $pdo, string $action, string $module, ?int $entityId, string $description): bool
 {
     try {
+        setLastAuditError(null);
+
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
@@ -71,7 +79,8 @@ function logAudit(PDO $pdo, string $action, string $module, ?int $entityId, stri
 
         $stmt->execute([$userId, strtoupper($action), $module, $entityId, $description, $ip]);
         return true;
-    } catch (Throwable) {
+    } catch (Throwable $e) {
+        setLastAuditError(get_class($e) . ': ' . $e->getMessage());
         // Audit failures must never break the main request.
         return false;
     }
