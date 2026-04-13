@@ -4,52 +4,64 @@ require '../../components/audit_log.php';
 
 $reportUser = getCurrentUser($pdo);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'log_print')) {
-    header('Content-Type: application/json; charset=utf-8');
+if (($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print' || ($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print_beacon') {
+    $requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if ($requestMethod !== 'POST' && $requestMethod !== 'GET') {
+        http_response_code(405);
+        exit;
+    }
+
+    $isBeacon = (($_POST['action'] ?? $_GET['action'] ?? '') === 'log_print_beacon');
+
+    if (!$isBeacon) {
+        header('Content-Type: application/json; charset=utf-8');
+    }
 
     if (!$reportUser) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        if (!$isBeacon) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        } else {
+            http_response_code(401);
+        }
         exit;
     }
 
     $userId = (int) ($reportUser['user_id'] ?? 0);
     if ($userId <= 0) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Invalid session user']);
+        if (!$isBeacon) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Invalid session user']);
+        } else {
+            http_response_code(401);
+        }
         exit;
     }
 
-    $description = isset($_POST['description']) && trim((string) $_POST['description']) !== ''
-        ? trim((string) $_POST['description'])
+    $rawDescription = $_POST['description'] ?? $_GET['description'] ?? '';
+    $description = trim((string) $rawDescription) !== ''
+        ? trim((string) $rawDescription)
         : 'Printed dashboard report';
 
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
-        ?? $_SERVER['REMOTE_ADDR']
-        ?? null;
-
-    if (is_string($ip) && str_contains($ip, ',')) {
-        $ip = trim(explode(',', $ip)[0]);
-    }
-
-    if (is_string($ip) && strlen($ip) > 45) {
-        $ip = substr($ip, 0, 45);
-    }
-
-    try {
-        $stmt = $pdo->prepare('INSERT INTO audit_logs (user_id, action, module, entity_id, description, ip_address) VALUES (?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$userId, 'PRINT', 'dashboard', null, $description, $ip]);
-    } catch (Throwable $e) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to write print audit log',
-            'error' => $e->getMessage(),
-        ]);
+    $logged = logAudit($pdo, 'PRINT', 'dashboard', null, $description);
+    if (!$logged) {
+        if (!$isBeacon) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Failed to write print audit log',
+            ]);
+        } else {
+            http_response_code(500);
+        }
         exit;
     }
 
-    echo json_encode(['success' => true]);
+    if (!$isBeacon) {
+        echo json_encode(['success' => true]);
+    } else {
+        http_response_code(204);
+    }
     exit;
 }
 
@@ -1124,6 +1136,8 @@ $reportSystemName = 'MedVantage';
             description: 'Printed dashboard report'
         });
 
+        let logged = false;
+
         try {
             const printLogResponse = await fetch(printLogEndpoint, {
                 method: 'POST',
@@ -1135,7 +1149,9 @@ $reportSystemName = 'MedVantage';
                 credentials: 'same-origin'
             });
 
-            if (!printLogResponse.ok) {
+            if (printLogResponse.ok) {
+                logged = true;
+            } else {
                 const rawBody = await printLogResponse.text();
                 let parsedBody = rawBody;
                 try {
@@ -1153,6 +1169,33 @@ $reportSystemName = 'MedVantage';
         } catch (error) {
             console.error('Network error while logging dashboard print action', error);
         }
+
+        if (!logged) {
+            const beaconParams = new URLSearchParams({
+                action: 'log_print_beacon',
+                module: 'dashboard',
+                description: 'Printed dashboard report',
+                _: String(Date.now())
+            });
+            const beaconUrl = `${printLogEndpoint}?${beaconParams.toString()}`;
+
+            try {
+                const beaconResponse = await fetch(beaconUrl, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+
+                if (!beaconResponse.ok) {
+                    console.error('Fallback print log beacon failed', {
+                        status: beaconResponse.status,
+                        statusText: beaconResponse.statusText
+                    });
+                }
+            } catch (beaconError) {
+                console.error('Network error on fallback print log beacon', beaconError);
+            }
+        }
     }
 
     async function printReport() {
@@ -1167,6 +1210,10 @@ $reportSystemName = 'MedVantage';
             return;
         }
 
+        // Trigger audit log write from the source window to avoid missing logs
+        // when browser print lifecycle events behave inconsistently.
+        logDashboardPrintAction();
+
         const printContent = `
             <!DOCTYPE html>
             <html>
@@ -1178,16 +1225,8 @@ $reportSystemName = 'MedVantage';
             <body>
                 ${buildReportDocumentMarkup()}
                 <script>
-                    window.addEventListener('afterprint', async function () {
-                        try {
-                            if (window.opener && typeof window.opener.logDashboardPrintAction === 'function') {
-                                await window.opener.logDashboardPrintAction();
-                            }
-                        } catch (error) {
-                            console.error('Failed to log dashboard print action from print view', error);
-                        } finally {
-                            window.close();
-                        }
+                    window.addEventListener('afterprint', function () {
+                        window.close();
                     });
 
                     window.addEventListener('load', function () {
