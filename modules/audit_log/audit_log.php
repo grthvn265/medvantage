@@ -211,7 +211,7 @@ function actionBadge(string $action, array $map): string
                         <button type="submit" class="btn btn-sm btn-primary" style="display:none;">Filter</button>
                     </div>
                     <div class="col-md-auto d-flex align-items-end">
-                        <a href="audit_log.php" class="btn btn-sm btn-outline-secondary">Reset</a>
+                        <a href="<?= htmlspecialchars(appUrl('/modules/audit_log/audit_log.php')) ?>" class="btn btn-sm btn-outline-secondary">Reset</a>
                     </div>
                     <div class="col-md-auto d-flex align-items-end">
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="printAuditLogReport()">
