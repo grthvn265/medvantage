@@ -71,7 +71,7 @@ try {
 
     // Get doctor's available times
     $stmt = $pdo->prepare("
-        SELECT TRIM(time_slot) as time_slot FROM doctor_available_times 
+           SELECT TIME_FORMAT(time_slot, '%H:%i') as time_slot FROM doctor_available_times 
         WHERE doctor_id = ? 
         ORDER BY time_slot ASC
     ");

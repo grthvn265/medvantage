@@ -829,9 +829,9 @@ async function fetchAvailableTimes(doctorId, date) {
         // Populate time dropdown with available times
         let html = '<option value="">Select Time</option>';
         data.times.forEach(time => {
-            // time is in format "10:00", convert to range for display
-            const hour = parseInt(time.substring(0, 2));
-            const startTime = time; // Already in 24-hour format
+            // Normalize incoming values (e.g., HH:MM or HH:MM:SS) to HH:MM
+            const startTime = String(time).slice(0, 5);
+            const hour = parseInt(startTime.substring(0, 2));
             const endHour = String(hour + 1).padStart(2, '0');
             const endTime = endHour + ':00';
             

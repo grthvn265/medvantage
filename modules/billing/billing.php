@@ -435,8 +435,26 @@ function loadBillingDetails(billingId) {
 // Generate Receipt Function
 async function generateReceipt(billingId) {
     try {
-        const response = await fetch(`get_receipt.php?id=${billingId}`);
-        const data = await response.json();
+        const receiptEndpoint = "<?= htmlspecialchars(appUrl('/modules/billing/get_receipt.php')) ?>";
+        const response = await fetch(`${receiptEndpoint}?id=${encodeURIComponent(billingId)}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const raw = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(raw);
+        } catch (parseError) {
+            throw new Error('Invalid server response while loading receipt.');
+        }
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Unable to load receipt.');
+        }
 
         if (data.success) {
             let receiptHtml = `

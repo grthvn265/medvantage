@@ -332,7 +332,7 @@ INSERT INTO `visits` (`visit_id`, `patient_id`, `doctor_id`, `visit_datetime`, `
 --
 ALTER TABLE `appointments`
   ADD PRIMARY KEY (`appointment_id`),
-  ADD UNIQUE KEY `unique_schedule` (`doctor_id`,`appointment_date`,`appointment_time`),
+  ADD UNIQUE KEY `uk_appt_schedule_state` (`doctor_id`,`appointment_date`,`appointment_time`,`status`,`is_archived`),
   ADD KEY `patient_id` (`patient_id`),
   ADD KEY `idx_date` (`appointment_date`),
   ADD KEY `idx_status` (`status`),

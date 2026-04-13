@@ -2,6 +2,40 @@
 require '../../components/db.php';
 require '../../components/audit_log.php';
 
+function normalizeAppointmentTime($rawTime) {
+    if ($rawTime === null) {
+        return null;
+    }
+
+    $rawTime = trim((string) $rawTime);
+    if ($rawTime === '') {
+        return null;
+    }
+
+    // Handle payloads like "12:00|12:00pm - 1:00pm" from legacy availability responses.
+    if (strpos($rawTime, '|') !== false) {
+        $rawTime = trim(explode('|', $rawTime, 2)[0]);
+    }
+
+    // Handle ranges like "12:00pm - 1:00pm" by taking the range start.
+    if (strpos($rawTime, '-') !== false) {
+        $rawTime = trim(explode('-', $rawTime, 2)[0]);
+    }
+
+    // Already canonical 24-hour format.
+    if (preg_match('/^\d{2}:\d{2}$/', $rawTime)) {
+        return $rawTime;
+    }
+
+    // Convert 12-hour input (e.g., "12:00pm" or "1:00 PM") to 24-hour HH:MM.
+    $parsed = date_create_from_format('g:ia', strtolower(str_replace(' ', '', $rawTime)));
+    if (!$parsed) {
+        $parsed = date_create_from_format('g:iA', strtoupper(str_replace(' ', '', $rawTime)));
+    }
+
+    return $parsed ? $parsed->format('H:i') : $rawTime;
+}
+
 // Validate input
 $patient_id = isset($_POST['patient_id']) ? (int)$_POST['patient_id'] : null;
 $doctor_id = isset($_POST['doctor_id']) ? (int)$_POST['doctor_id'] : null;
@@ -10,11 +44,7 @@ $appointment_time = isset($_POST['appointment_time']) ? $_POST['appointment_time
 $reason = isset($_POST['reason']) ? $_POST['reason'] : null;
 $status = 'Scheduled'; // New appointments are always Scheduled
 
-// Extract start time from hourly range (e.g., "10:00-11:00" -> "10:00")
-if ($appointment_time && strpos($appointment_time, '-') !== false) {
-    $timeRange = explode('-', $appointment_time);
-    $appointment_time = trim($timeRange[0]);
-}
+$appointment_time = normalizeAppointmentTime($appointment_time);
 
 // Validate required fields
 if (!$patient_id || !$doctor_id || !$appointment_date || !$appointment_time) {
@@ -61,7 +91,7 @@ try {
     // Check doctor availability - validate time
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM doctor_available_times 
-        WHERE doctor_id = ? AND TRIM(time_slot) = ?
+           WHERE doctor_id = ? AND TIME_FORMAT(time_slot, '%H:%i') = ?
     ");
     $stmt->execute([$doctor_id, $appointment_time]);
     $hasTimeSlot = $stmt->fetchColumn() > 0;
@@ -116,6 +146,12 @@ try {
     exit;
 
 } catch (Exception $e) {
-    header('Location: ' . appUrl('/appointments?error=' . urlencode($e->getMessage())));
+    $errorMessage = $e->getMessage();
+
+    if ($e instanceof PDOException && $e->getCode() === '23000') {
+        $errorMessage = 'Doctor is already booked at this time';
+    }
+
+    header('Location: ' . appUrl('/appointments?error=' . urlencode($errorMessage)));
     exit;
 }
