@@ -247,12 +247,23 @@ $reportSystemName = 'MedVantage';
 
         // Revenue by Month (Last 6 months)
         $monthlyRevenue = [];
+        $ymToLabel = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = date('Y-m', strtotime("-$i months"));
-            $stmt = $pdo->prepare("SELECT SUM(amount) FROM billing WHERE status='Paid' AND DATE_FORMAT(created_at,'%Y-%m') = ?");
-            $stmt->execute([$month]);
-            $amount = $stmt->fetchColumn();
-            $monthlyRevenue[date('M Y', strtotime($month . '-01'))] = $amount ? $amount : 0;
+            $label = date('M Y', strtotime($month . '-01'));
+            $ymToLabel[$month] = $label;
+            $monthlyRevenue[$label] = 0;
+        }
+
+        $startMonthDate = date('Y-m-01 00:00:00', strtotime('-5 months'));
+        $monthlyRevenueStmt = $pdo->prepare("\n            SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COALESCE(SUM(amount), 0) AS total\n            FROM billing\n            WHERE status = 'Paid' AND created_at >= ?\n            GROUP BY ym\n        ");
+        $monthlyRevenueStmt->execute([$startMonthDate]);
+
+        foreach ($monthlyRevenueStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $ym = (string) ($row['ym'] ?? '');
+            if (isset($ymToLabel[$ym])) {
+                $monthlyRevenue[$ymToLabel[$ym]] = (float) $row['total'];
+            }
         }
 
         // Appointments by Doctor (Last 30 days)

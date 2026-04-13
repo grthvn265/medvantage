@@ -7,13 +7,79 @@ $reportType = isset($_GET['type']) ? $_GET['type'] : 'appointments';
 
 $response = [];
 
+function buildRecentMonthBuckets(int $months = 6): array
+{
+    $buckets = [];
+
+    for ($i = $months - 1; $i >= 0; $i--) {
+        $month = date('Y-m', strtotime("-$i months"));
+        $label = date('M Y', strtotime($month . '-01'));
+        $buckets[$label] = [
+            'ym' => $month,
+            'value' => 0,
+        ];
+    }
+
+    return $buckets;
+}
+
+function fetchPaidBillingByMonth(PDO $pdo, int $months = 6): array
+{
+    $buckets = buildRecentMonthBuckets($months);
+    $ymToLabel = [];
+
+    foreach ($buckets as $label => $bucket) {
+        $ymToLabel[$bucket['ym']] = $label;
+    }
+
+    $startDate = date('Y-m-01 00:00:00', strtotime('-' . ($months - 1) . ' months'));
+
+    $stmt = $pdo->prepare("\n        SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COALESCE(SUM(amount), 0) AS total\n        FROM billing\n        WHERE status = 'Paid' AND created_at >= ?\n        GROUP BY ym\n    ");
+    $stmt->execute([$startDate]);
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $ym = (string) ($row['ym'] ?? '');
+        if (isset($ymToLabel[$ym])) {
+            $buckets[$ymToLabel[$ym]]['value'] = (float) $row['total'];
+        }
+    }
+
+    return array_map(static fn(array $bucket): float => (float) $bucket['value'], $buckets);
+}
+
+function fetchVisitsByMonth(PDO $pdo, int $months = 6): array
+{
+    $buckets = buildRecentMonthBuckets($months);
+    $ymToLabel = [];
+
+    foreach ($buckets as $label => $bucket) {
+        $ymToLabel[$bucket['ym']] = $label;
+    }
+
+    $startDate = date('Y-m-01 00:00:00', strtotime('-' . ($months - 1) . ' months'));
+
+    $stmt = $pdo->prepare("\n        SELECT DATE_FORMAT(visit_datetime, '%Y-%m') AS ym, COUNT(*) AS total\n        FROM visits\n        WHERE visit_datetime >= ?\n        GROUP BY ym\n    ");
+    $stmt->execute([$startDate]);
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $ym = (string) ($row['ym'] ?? '');
+        if (isset($ymToLabel[$ym])) {
+            $buckets[$ymToLabel[$ym]]['value'] = (int) $row['total'];
+        }
+    }
+
+    return array_map(static fn(array $bucket): int => (int) $bucket['value'], $buckets);
+}
+
 try {
     switch ($reportType) {
         case 'appointments':
             // Appointment Status Distribution
-            $scheduled = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Scheduled'")->fetchColumn();
-            $completed = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Completed'")->fetchColumn();
-            $cancelled = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Cancelled'")->fetchColumn();
+            $statusRow = $pdo->query("\n                SELECT\n                    SUM(CASE WHEN status = 'Scheduled' THEN 1 ELSE 0 END) AS scheduled,\n                    SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,\n                    SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled\n                FROM appointments\n            ")->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $scheduled = (int) ($statusRow['scheduled'] ?? 0);
+            $completed = (int) ($statusRow['completed'] ?? 0);
+            $cancelled = (int) ($statusRow['cancelled'] ?? 0);
             
             $response = [
                 'chartType' => 'doughnut',
@@ -57,9 +123,11 @@ try {
 
         case 'billing':
             // Billing Status Distribution
-            $paid = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Paid'")->fetchColumn() ?: 0;
-            $pending = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Pending'")->fetchColumn() ?: 0;
-            $cancelled = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Cancelled'")->fetchColumn() ?: 0;
+            $billingStatus = $pdo->query("\n                SELECT\n                    COALESCE(SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END), 0) AS paid,\n                    COALESCE(SUM(CASE WHEN status = 'Pending' THEN amount ELSE 0 END), 0) AS pending,\n                    COALESCE(SUM(CASE WHEN status = 'Cancelled' THEN amount ELSE 0 END), 0) AS cancelled\n                FROM billing\n            ")->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $paid = (float) ($billingStatus['paid'] ?? 0);
+            $pending = (float) ($billingStatus['pending'] ?? 0);
+            $cancelled = (float) ($billingStatus['cancelled'] ?? 0);
             $total = $paid + $pending + $cancelled;
             
             $response = [
@@ -81,14 +149,7 @@ try {
             ];
             
             // Get billing by month
-            $monthlyBilling = [];
-            for ($i = 5; $i >= 0; $i--) {
-                $month = date('Y-m', strtotime("-$i months"));
-                $stmt = $pdo->prepare("SELECT SUM(amount) FROM billing WHERE status='Paid' AND DATE_FORMAT(created_at,'%Y-%m') = ?");
-                $stmt->execute([$month]);
-                $amount = $stmt->fetchColumn() ?: 0;
-                $monthlyBilling[date('M Y', strtotime($month . '-01'))] = $amount;
-            }
+            $monthlyBilling = fetchPaidBillingByMonth($pdo, 6);
             $response['secondaryChart']['labels'] = array_keys($monthlyBilling);
             $response['secondaryChart']['data'] = array_values($monthlyBilling);
             $response['secondaryChart']['borderColor'] = '#667eea';
@@ -96,14 +157,7 @@ try {
 
         case 'revenue':
             // Revenue Trend
-            $monthlyRevenue = [];
-            for ($i = 5; $i >= 0; $i--) {
-                $month = date('Y-m', strtotime("-$i months"));
-                $stmt = $pdo->prepare("SELECT SUM(amount) FROM billing WHERE status='Paid' AND DATE_FORMAT(created_at,'%Y-%m') = ?");
-                $stmt->execute([$month]);
-                $amount = $stmt->fetchColumn() ?: 0;
-                $monthlyRevenue[date('M Y', strtotime($month . '-01'))] = $amount;
-            }
+            $monthlyRevenue = fetchPaidBillingByMonth($pdo, 6);
             $totalRevenue = array_sum($monthlyRevenue);
             $avgRevenue = count($monthlyRevenue) > 0 ? $totalRevenue / count($monthlyRevenue) : 0;
             
@@ -127,9 +181,11 @@ try {
             ];
             
             // Get billing status
-            $paid = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Paid'")->fetchColumn() ?: 0;
-            $pending = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Pending'")->fetchColumn() ?: 0;
-            $cancelled = $pdo->query("SELECT SUM(amount) FROM billing WHERE status='Cancelled'")->fetchColumn() ?: 0;
+            $billingStatus = $pdo->query("\n                SELECT\n                    COALESCE(SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END), 0) AS paid,\n                    COALESCE(SUM(CASE WHEN status = 'Pending' THEN amount ELSE 0 END), 0) AS pending,\n                    COALESCE(SUM(CASE WHEN status = 'Cancelled' THEN amount ELSE 0 END), 0) AS cancelled\n                FROM billing\n            ")->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            $paid = (float) ($billingStatus['paid'] ?? 0);
+            $pending = (float) ($billingStatus['pending'] ?? 0);
+            $cancelled = (float) ($billingStatus['cancelled'] ?? 0);
             
             $response['secondaryChart']['labels'] = ['Paid', 'Pending', 'Cancelled'];
             $response['secondaryChart']['data'] = [$paid, $pending, $cancelled];
@@ -180,14 +236,7 @@ try {
         case 'visits':
             // Visits Analytics
             $totalVisits = $pdo->query("SELECT COUNT(*) FROM visits")->fetchColumn();
-            $visitsByMonth = [];
-            for ($i = 5; $i >= 0; $i--) {
-                $month = date('Y-m', strtotime("-$i months"));
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM visits WHERE DATE_FORMAT(visit_datetime,'%Y-%m') = ?");
-                $stmt->execute([$month]);
-                $count = $stmt->fetchColumn();
-                $visitsByMonth[date('M Y', strtotime($month . '-01'))] = $count;
-            }
+            $visitsByMonth = fetchVisitsByMonth($pdo, 6);
             
             $response = [
                 'chartType' => 'line',

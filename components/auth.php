@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 const SESSION_IDLE_TIMEOUT = 7200;
+const RBAC_BOOTSTRAP_INTERVAL = 1800;
+const RBAC_BOOTSTRAP_SESSION_KEY = '_rbac_bootstrap_at';
 
 function isHttpsRequest(): bool
 {
@@ -218,18 +220,14 @@ function authTablesExist(PDO $pdo): bool
 
     $required = ['roles', 'users', 'user_module_access', 'app_modules'];
 
-    $stmt = $pdo->prepare('
-        SELECT COUNT(*)
-        FROM information_schema.tables
-        WHERE table_schema = DATABASE() AND table_name = ?
-    ');
-    foreach ($required as $table) {
-        $stmt->execute([$table]);
-        if ((int) $stmt->fetchColumn() === 0) {
-            $checked = true;
-            $ready = false;
-            return false;
-        }
+    $placeholders = implode(',', array_fill(0, count($required), '?'));
+    $stmt = $pdo->prepare("\n        SELECT COUNT(*)\n        FROM information_schema.tables\n        WHERE table_schema = DATABASE()\n          AND table_name IN ($placeholders)\n    ");
+    $stmt->execute($required);
+
+    if ((int) $stmt->fetchColumn() !== count($required)) {
+        $checked = true;
+        $ready = false;
+        return false;
     }
 
     $checked = true;
@@ -349,12 +347,40 @@ function ensureOwnerAccount(PDO $pdo): void
     }
 }
 
+function shouldRunRbacBootstrap(): bool
+{
+    startAuthSession();
+
+    $lastBootstrapAt = (int) ($_SESSION[RBAC_BOOTSTRAP_SESSION_KEY] ?? 0);
+    if ($lastBootstrapAt <= 0) {
+        return true;
+    }
+
+    return (time() - $lastBootstrapAt) >= RBAC_BOOTSTRAP_INTERVAL;
+}
+
+function markRbacBootstrapRun(): void
+{
+    startAuthSession();
+    $_SESSION[RBAC_BOOTSTRAP_SESSION_KEY] = time();
+}
+
 function getCurrentUser(PDO $pdo): ?array
 {
     startAuthSession();
 
+    static $loadedForUserId = null;
+    static $cachedUser = null;
+
     if (empty($_SESSION['user_id'])) {
+        $loadedForUserId = null;
+        $cachedUser = null;
         return null;
+    }
+
+    $sessionUserId = (int) $_SESSION['user_id'];
+    if ($loadedForUserId === $sessionUserId) {
+        return $cachedUser;
     }
 
     $stmt = $pdo->prepare('
@@ -364,13 +390,18 @@ function getCurrentUser(PDO $pdo): ?array
         WHERE u.user_id = ?
         LIMIT 1
     ');
-    $stmt->execute([(int) $_SESSION['user_id']]);
+    $stmt->execute([$sessionUserId]);
 
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$user || (int) $user['is_active'] !== 1) {
         unset($_SESSION['user_id']);
+        $loadedForUserId = null;
+        $cachedUser = null;
         return null;
     }
+
+    $loadedForUserId = $sessionUserId;
+    $cachedUser = $user;
 
     return $user;
 }
@@ -528,9 +559,12 @@ function requireCurrentRouteAccess(PDO $pdo): void
         exit;
     }
 
-    syncAppModules($pdo);
-    ensureBaseRoles($pdo);
-    ensureOwnerAccount($pdo);
+    if (shouldRunRbacBootstrap()) {
+        syncAppModules($pdo);
+        ensureBaseRoles($pdo);
+        ensureOwnerAccount($pdo);
+        markRbacBootstrapRun();
+    }
 
     if (isAuthRoute()) {
         return;

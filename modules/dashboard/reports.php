@@ -145,6 +145,24 @@ function getPatientsReport($fields, $pdo) {
     $query = "SELECT p.* FROM patients p WHERE p.status = 'active' ORDER BY p.last_name ASC";
     $stmt = $pdo->query($query);
     $patients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $visitCounts = [];
+    if (in_array('total_visits', $fields, true)) {
+        $visitCountRows = $pdo->query("SELECT patient_id, COUNT(*) AS total FROM visits WHERE is_archived = 0 GROUP BY patient_id")
+            ->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($visitCountRows as $row) {
+            $visitCounts[(int) $row['patient_id']] = (int) $row['total'];
+        }
+    }
+
+    $appointmentCounts = [];
+    if (in_array('total_appointments', $fields, true)) {
+        $appointmentCountRows = $pdo->query("SELECT patient_id, COUNT(*) AS total FROM appointments WHERE is_archived = 0 GROUP BY patient_id")
+            ->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($appointmentCountRows as $row) {
+            $appointmentCounts[(int) $row['patient_id']] = (int) $row['total'];
+        }
+    }
     
     $data = [];
     foreach ($patients as $patient) {
@@ -160,13 +178,9 @@ function getPatientsReport($fields, $pdo) {
                     $row[$field] = '';
                 }
             } elseif ($field === 'total_visits') {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM visits WHERE patient_id = ? AND is_archived = 0");
-                $stmt->execute([$patient['patient_id']]);
-                $row[$field] = $stmt->fetchColumn();
+                $row[$field] = $visitCounts[(int) $patient['patient_id']] ?? 0;
             } elseif ($field === 'total_appointments') {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE patient_id = ? AND is_archived = 0");
-                $stmt->execute([$patient['patient_id']]);
-                $row[$field] = $stmt->fetchColumn();
+                $row[$field] = $appointmentCounts[(int) $patient['patient_id']] ?? 0;
             } else {
                 $row[$field] = $patient[$field] ?? '';
             }
@@ -187,6 +201,24 @@ function getDoctorsReport($fields, $pdo) {
     $query = "SELECT d.* FROM doctors d WHERE d.is_archived = 0 ORDER BY d.last_name ASC";
     $stmt = $pdo->query($query);
     $doctors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $appointmentCounts = [];
+    if (in_array('total_appointments', $fields, true) || in_array('completed_appointments', $fields, true)) {
+        $appointmentCountRows = $pdo->query("SELECT doctor_id, COUNT(*) AS total FROM appointments WHERE is_archived = 0 GROUP BY doctor_id")
+            ->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($appointmentCountRows as $row) {
+            $appointmentCounts[(int) $row['doctor_id']] = (int) $row['total'];
+        }
+    }
+
+    $completedAppointmentCounts = [];
+    if (in_array('completed_appointments', $fields, true)) {
+        $completedCountRows = $pdo->query("SELECT doctor_id, COUNT(*) AS total FROM appointments WHERE status = 'Completed' AND is_archived = 0 GROUP BY doctor_id")
+            ->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($completedCountRows as $row) {
+            $completedAppointmentCounts[(int) $row['doctor_id']] = (int) $row['total'];
+        }
+    }
     
     $data = [];
     foreach ($doctors as $doctor) {
@@ -202,13 +234,9 @@ function getDoctorsReport($fields, $pdo) {
                     $row[$field] = '';
                 }
             } elseif ($field === 'total_appointments') {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND is_archived = 0");
-                $stmt->execute([$doctor['doctor_id']]);
-                $row[$field] = $stmt->fetchColumn();
+                $row[$field] = $appointmentCounts[(int) $doctor['doctor_id']] ?? 0;
             } elseif ($field === 'completed_appointments') {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND status = 'Completed' AND is_archived = 0");
-                $stmt->execute([$doctor['doctor_id']]);
-                $row[$field] = $stmt->fetchColumn();
+                $row[$field] = $completedAppointmentCounts[(int) $doctor['doctor_id']] ?? 0;
             } else {
                 $row[$field] = $doctor[$field] ?? '';
             }
