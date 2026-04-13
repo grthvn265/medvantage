@@ -78,8 +78,8 @@ $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
    FETCH PATIENTS & DOCTORS
 ============================ */
 
-$patients = $pdo->query("SELECT patient_id, first_name, last_name FROM patients ORDER BY last_name ASC")->fetchAll(PDO::FETCH_ASSOC);
-$doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$patients = $pdo->query("SELECT patient_id, first_name, last_name FROM patients WHERE status = 'active' ORDER BY last_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$doctors = $pdo->query("SELECT * FROM doctors WHERE is_archived = 0 ORDER BY last_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // No longer fetching all doctor availability here - it will be requested via AJAX when needed
 
@@ -347,7 +347,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 <?php foreach ($appointments as $a): ?>
 <tr>
 <td><?= $a['appointment_id'] ?></td>
-<td><?= date("M d, Y", strtotime($a['appointment_date'])) ?></td>
+<td><?= date("m/d/Y", strtotime($a['appointment_date'])) ?></td>
 <td><?= formatTimeSlot(date("H:i", strtotime($a['appointment_time']))) ?></td>
 <td><?= $a['p_lname'] ?>, <?= $a['p_fname'] ?></td>
 <td>Dr. <?= $a['d_lname'] ?></td>
@@ -391,7 +391,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 // Get list of patients with scheduled appointments
 $stmt = $pdo->prepare("
     SELECT DISTINCT patient_id FROM appointments 
-    WHERE status = 'Scheduled'
+    WHERE status = 'Scheduled' AND is_archived = 0
 ");
 $stmt->execute();
 $patientsWithAppointments = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -1063,8 +1063,8 @@ function loadBlockedDates() {
                 data.dates.forEach(dateObj => {
                     const formattedDate = new Date(dateObj.blocked_date).toLocaleDateString('en-US', {
                         year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
+                        month: '2-digit',
+                        day: '2-digit'
                     });
                     const item = document.createElement('div');
                     item.className = 'd-flex justify-content-between align-items-center mb-2';

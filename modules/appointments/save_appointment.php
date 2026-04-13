@@ -23,18 +23,18 @@ if (!$patient_id || !$doctor_id || !$appointment_date || !$appointment_time) {
 }
 
 try {
-    // Validate patient exists
-    $stmt = $pdo->prepare("SELECT patient_id FROM patients WHERE patient_id = ?");
+    // Validate patient exists and is active
+    $stmt = $pdo->prepare("SELECT patient_id FROM patients WHERE patient_id = ? AND status = 'active'");
     $stmt->execute([$patient_id]);
     if (!$stmt->fetch()) {
-        throw new Exception("Patient not found");
+        throw new Exception("Patient not found or inactive");
     }
 
-    // Validate doctor exists
-    $stmt = $pdo->prepare("SELECT doctor_id FROM doctors WHERE doctor_id = ?");
+    // Validate doctor exists and is active
+    $stmt = $pdo->prepare("SELECT doctor_id FROM doctors WHERE doctor_id = ? AND is_archived = 0");
     $stmt->execute([$doctor_id]);
     if (!$stmt->fetch()) {
-        throw new Exception("Doctor not found");
+        throw new Exception("Doctor not found or archived");
     }
 
     // Check if date is blocked globally
@@ -66,12 +66,16 @@ try {
     $stmt->execute([$doctor_id, $appointment_time]);
     $hasTimeSlot = $stmt->fetchColumn() > 0;
 
-    // If doctor has no specific times configured, all times are available
+    // If no times are configured, doctor cannot be booked
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM doctor_available_times WHERE doctor_id = ?");
     $stmt->execute([$doctor_id]);
     $hasAnyTimes = $stmt->fetchColumn() > 0;
 
-    if ($hasAnyTimes && !$hasTimeSlot) {
+    if (!$hasAnyTimes) {
+        throw new Exception("No available time slots configured for this doctor");
+    }
+
+    if (!$hasTimeSlot) {
         throw new Exception("Doctor is not available at this time slot");
     }
 
@@ -82,6 +86,7 @@ try {
         AND appointment_date = ? 
         AND appointment_time = ?
         AND status != 'Cancelled'
+        AND is_archived = 0
     ");
     $stmt->execute([$doctor_id, $appointment_date, $appointment_time]);
     if ($stmt->fetchColumn() > 0) {

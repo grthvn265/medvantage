@@ -18,6 +18,15 @@ try {
         exit;
     }
 
+    // Validate doctor exists and is active
+    $stmt = $pdo->prepare("SELECT doctor_id FROM doctors WHERE doctor_id = ? AND is_archived = 0");
+    $stmt->execute([$doctor_id]);
+    if (!$stmt->fetchColumn()) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Doctor is not available']);
+        exit;
+    }
+
     // Validate date format
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
         http_response_code(400);
@@ -69,9 +78,14 @@ try {
     $stmt->execute([$doctor_id]);
     $availableTimes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // If no times set, doctor available all day - use default hourly slots
+    // If no times are configured, treat doctor as unavailable for scheduling
     if (empty($availableTimes)) {
-        $availableTimes = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+        echo json_encode([
+            'available' => false,
+            'message' => 'No available time slots configured for this doctor',
+            'times' => []
+        ]);
+        exit;
     }
 
     // Get booked times for this doctor on this date (excluding cancelled appointments and current appointment if editing)
@@ -80,6 +94,7 @@ try {
         WHERE doctor_id = ? 
         AND appointment_date = ? 
         AND status != 'Cancelled'
+        AND is_archived = 0
     ";
     $params = [$doctor_id, $date];
     
@@ -97,19 +112,9 @@ try {
     // Remove booked times from available times
     $availableTimes = array_values(array_diff($availableTimes, $bookedTimes));
 
-    // Convert available times to hourly range format with 12-hour display
-    $availableTimeRanges = [];
-    foreach ($availableTimes as $time) {
-        $hour = (int)substr($time, 0, 2);
-        $startTime = date('g:ia', strtotime($time));
-        $nextHour = str_pad($hour + 1, 2, '0', STR_PAD_LEFT);
-        $endTime = date('g:ia', strtotime($nextHour . ':00'));
-        $availableTimeRanges[] = $time . '|' . $startTime . ' - ' . $endTime;
-    }
-
     echo json_encode([
         'available' => true,
-        'times' => $availableTimeRanges,
+        'times' => array_values($availableTimes),
         'dayOfWeek' => $dayOfWeek,
         'booked' => $bookedTimes
     ]);
