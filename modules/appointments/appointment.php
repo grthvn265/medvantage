@@ -323,7 +323,7 @@ Dr. <?= $doc['last_name'] ?>, <?= $doc['first_name'] ?>
 </div>
 
 <div class="col-md-auto">
-<a href="appointment.php" class="btn btn-secondary btn-sm">Reset</a>
+<a href="<?= htmlspecialchars(appUrl('/appointments')) ?>" class="btn btn-secondary btn-sm">Reset</a>
 </div>
 </form>
 </div>

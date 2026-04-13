@@ -223,7 +223,7 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY last_name ASC")->fetchAll
 </div>
 
 <div class="col-md-auto">
-<a href="billing.php" class="btn btn-secondary btn-sm">Reset</a>
+<a href="<?= htmlspecialchars(appUrl('/billing')) ?>" class="btn btn-secondary btn-sm">Reset</a>
 </div>
 </form>
 </div>
@@ -415,6 +415,7 @@ function loadBillingDetails(billingId) {
     
     // Update edit button to redirect to edit page
     const editBtn = document.getElementById('editBillingBtn');
+    const editBillingEndpoint = "<?= htmlspecialchars(appUrl('/modules/billing/edit_billing.php')) ?>";
     if (status.includes('Paid')) {
         editBtn.disabled = true;
         editBtn.style.opacity = '0.5';
@@ -427,7 +428,7 @@ function loadBillingDetails(billingId) {
         editBtn.style.cursor = 'pointer';
         editBtn.title = '';
         editBtn.onclick = function() {
-            window.location.href = `edit_billing.php?id=${billingId}`;
+            window.location.href = `${editBillingEndpoint}?id=${encodeURIComponent(billingId)}`;
         };
     }
 }

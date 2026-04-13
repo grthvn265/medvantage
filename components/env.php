@@ -149,6 +149,7 @@ if (!function_exists('app_config')) {
                 'url' => (string) env('APP_URL', ''),
                 'domain' => (string) env('APP_DOMAIN', ''),
                 'force_https' => (bool) env('APP_FORCE_HTTPS', false),
+                'timezone' => (string) env('APP_TIMEZONE', 'Asia/Manila'),
             ],
             'db' => [
                 'host' => (string) env('DB_HOST', 'localhost'),
@@ -156,6 +157,7 @@ if (!function_exists('app_config')) {
                 'user' => (string) env('DB_USER', ''),
                 'pass' => (string) env('DB_PASS', ''),
                 'charset' => (string) env('DB_CHARSET', 'utf8mb4'),
+                'timezone' => (string) env('DB_TIMEZONE', '+08:00'),
             ],
         ];
     }
@@ -163,3 +165,9 @@ if (!function_exists('app_config')) {
 
 // Prime cache immediately for early consumers.
 load_dotenv();
+
+// Ensure all PHP date/time operations use Philippine Standard Time by default.
+$appTimezone = (string) env('APP_TIMEZONE', 'Asia/Manila');
+if (!@date_default_timezone_set($appTimezone)) {
+    date_default_timezone_set('Asia/Manila');
+}

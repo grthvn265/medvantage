@@ -126,7 +126,7 @@ $amount = floatval($billing["amount"]);
 
                 <div class="col-md-12">
                     <button type="submit" class="btn btn-warning" <?php echo ($billing["status"] === "Paid") ? 'disabled' : ''; ?>>Update Billing</button>
-                    <a href="billing.php" class="btn btn-secondary">Cancel</a>
+                        <a href="<?= htmlspecialchars(appUrl('/billing')) ?>" class="btn btn-secondary">Cancel</a>
                 </div>
             </div>
         </form>

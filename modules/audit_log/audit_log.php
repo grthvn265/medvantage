@@ -24,6 +24,34 @@ $filterDate   = isset($_GET['date']) ? trim($_GET['date']) : '';
 $moduleOptions = $pdo->query("SELECT DISTINCT module FROM audit_logs ORDER BY module ASC")->fetchAll(PDO::FETCH_COLUMN);
 $actionOptions = $pdo->query("SELECT DISTINCT action FROM audit_logs ORDER BY action ASC")->fetchAll(PDO::FETCH_COLUMN);
 $userOptions   = $pdo->query("SELECT user_id, full_name FROM users ORDER BY full_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$userNameMap   = [];
+
+foreach ($userOptions as $userOption) {
+    $userNameMap[(int) $userOption['user_id']] = $userOption['full_name'];
+}
+
+$currentUserName = 'All Users';
+if ($filterUser > 0 && isset($userNameMap[$filterUser])) {
+    $currentUserName = $userNameMap[$filterUser];
+}
+
+$activeFilters = [];
+if ($filterModule !== '') {
+    $activeFilters[] = 'Module: ' . $filterModule;
+}
+if ($filterAction !== '') {
+    $activeFilters[] = 'Action: ' . $filterAction;
+}
+if ($filterUser > 0) {
+    $activeFilters[] = 'User: ' . $currentUserName;
+}
+if ($filterDate !== '') {
+    $activeFilters[] = 'Date: ' . $filterDate;
+}
+
+$reportUser = $currentUser['full_name'] ?? $currentUser['username'] ?? 'System User';
+$reportLogoUrl = appUrl('/components/logo.png');
+$reportSystemName = 'MedVantage';
 
 // Build query
 $where  = [];
@@ -69,6 +97,20 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$auditLogReport = [
+    'total_records'   => count($logs),
+    'generated_at'    => date('F j, Y, g:i A'),
+    'generated_by'    => $reportUser,
+    'system_name'     => $reportSystemName,
+    'logo_url'        => $reportLogoUrl,
+    'active_filters'  => $activeFilters,
+    'filter_summary'  => empty($activeFilters) ? 'No filters applied' : implode(' | ', $activeFilters),
+    'module'          => $filterModule !== '' ? $filterModule : 'All Modules',
+    'action'          => $filterAction !== '' ? $filterAction : 'All Actions',
+    'user'            => $currentUserName,
+    'date'            => $filterDate !== '' ? $filterDate : 'All Dates',
+];
+
 $actionBadgeClass = [
     'CREATE'              => 'bg-success',
     'UPDATE'              => 'bg-primary',
@@ -111,6 +153,7 @@ function actionBadge(string $action, array $map): string
             color: #095c5c;
             font-size: 12px;
         }
+
     </style>
 </head>
 <body>
@@ -170,6 +213,11 @@ function actionBadge(string $action, array $map): string
                     <div class="col-md-auto d-flex align-items-end">
                         <a href="audit_log.php" class="btn btn-sm btn-outline-secondary">Reset</a>
                     </div>
+                    <div class="col-md-auto d-flex align-items-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="printAuditLogReport()">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                    </div>
                 </form>
                 </div>
 
@@ -213,6 +261,303 @@ function actionBadge(string $action, array $map): string
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
+const auditLogRows = <?= json_encode($logs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+const auditLogReport = <?= json_encode($auditLogReport, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getAuditLogPrintStyles() {
+    return `
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                color: #1f2933;
+                background: #ffffff;
+            }
+            .report-document {
+                padding: 28px;
+            }
+            .report-document-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 24px;
+                padding-bottom: 20px;
+                border-bottom: 3px solid #0a7d7d;
+                margin-bottom: 24px;
+            }
+            .report-document-brand {
+                display: flex;
+                align-items: center;
+                gap: 18px;
+            }
+            .report-document-brand img {
+                width: 78px;
+                height: 78px;
+                object-fit: contain;
+            }
+            .report-document-brand h1 {
+                margin: 0 0 4px;
+                font-size: 28px;
+                color: #071f26;
+            }
+            .report-document-brand p {
+                margin: 0;
+                color: #52606d;
+                font-size: 14px;
+            }
+            .report-document-meta {
+                min-width: 240px;
+                padding: 16px 18px;
+                border-radius: 12px;
+                background: #f4fbfb;
+                border: 1px solid rgba(10, 125, 125, 0.16);
+            }
+            .report-document-meta p {
+                margin: 0 0 8px;
+                font-size: 13px;
+                color: #52606d;
+            }
+            .report-document-meta p:last-child {
+                margin-bottom: 0;
+            }
+            .report-document-meta span {
+                font-weight: 700;
+                color: #071f26;
+            }
+            .report-document-summary {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+            .report-document-summary-card {
+                padding: 16px 18px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, rgba(7, 31, 38, 0.03) 0%, rgba(10, 125, 125, 0.08) 100%);
+                border: 1px solid rgba(7, 31, 38, 0.08);
+            }
+            .report-document-summary-card small {
+                display: block;
+                margin-bottom: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #52606d;
+                font-weight: 700;
+            }
+            .report-document-summary-card strong {
+                color: #071f26;
+                font-size: 18px;
+            }
+            .report-document-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .report-document-table thead {
+                background: linear-gradient(135deg, #071f26 0%, #0a7d7d 100%);
+            }
+            .report-document-table th {
+                padding: 12px;
+                font-size: 12px;
+                text-align: left;
+                color: #ffffff;
+                border: 1px solid #d9e2ec;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+            }
+            .report-document-table td {
+                padding: 11px 12px;
+                border: 1px solid #d9e2ec;
+                font-size: 13px;
+                vertical-align: top;
+            }
+            .report-document-table tbody tr:nth-child(even) {
+                background: #f8fbfd;
+            }
+            .report-document-footer {
+                margin-top: 22px;
+                padding-top: 16px;
+                border-top: 1px solid #d9e2ec;
+                font-size: 12px;
+                color: #52606d;
+                text-align: center;
+            }
+            .badge-print {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 999px;
+                background: #e9f5f5;
+                color: #095c5c;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .badge-print.badge-danger {
+                background: #fdecec;
+                color: #a61b1b;
+            }
+            .badge-print.badge-success {
+                background: #eaf7ef;
+                color: #137333;
+            }
+            .badge-print.badge-warning {
+                background: #fff4db;
+                color: #8a5b00;
+            }
+            @media print {
+                @page {
+                    size: A4 landscape;
+                    margin: 10mm;
+                }
+                .report-document {
+                    padding: 0;
+                }
+            }
+        </style>
+    `;
+}
+
+function getAuditLogBadgeClass(action) {
+    const normalized = String(action || '').toUpperCase();
+    if (['CREATE', 'ACTIVATE', 'UNBLOCK_DATE'].includes(normalized)) return 'badge-success';
+    if (['DELETE', 'DEACTIVATE', 'BLOCK_DATE', 'PERMANENTLY_DELETED'].includes(normalized)) return 'badge-danger';
+    if (['UPDATE', 'ARCHIVE', 'RESTORE', 'LOGIN', 'LOGOUT', 'CANCEL'].includes(normalized)) return 'badge-warning';
+    return '';
+}
+
+function buildAuditLogTableMarkup() {
+    const rows = auditLogRows.map((log) => {
+        const actionClass = getAuditLogBadgeClass(log.action);
+        const actionBadge = `<span class="badge-print ${actionClass}">${escapeHtml(log.action)}</span>`;
+        const performedBy = log.performed_by ? escapeHtml(log.performed_by) : '<span class="text-muted">System</span>';
+        const moduleLabel = escapeHtml(String(log.module || '').replace(/_/g, ' '));
+        const recordId = log.entity_id !== null && log.entity_id !== '' ? escapeHtml(log.entity_id) : '—';
+        const description = escapeHtml(log.description || '');
+        const ipAddress = log.ip_address ? escapeHtml(log.ip_address) : '—';
+
+        return `
+            <tr>
+                <td>${escapeHtml(log.log_id)}</td>
+                <td style="white-space:nowrap">${escapeHtml(log.created_at)}</td>
+                <td>${performedBy}</td>
+                <td>${actionBadge}</td>
+                <td>${moduleLabel}</td>
+                <td>${recordId}</td>
+                <td>${description}</td>
+                <td>${ipAddress}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <table class="report-document-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Timestamp</th>
+                    <th>Performed By</th>
+                    <th>Action</th>
+                    <th>Module</th>
+                    <th>Record ID</th>
+                    <th>Description</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+}
+
+function buildAuditLogDocumentMarkup() {
+    const filterSummary = auditLogReport.filter_summary || 'No filters applied';
+
+    return `
+        <div class="report-document">
+            <div class="report-document-header">
+                <div class="report-document-brand">
+                    <img src="${escapeHtml(auditLogReport.logo_url)}" alt="${escapeHtml(auditLogReport.system_name)} Logo">
+                    <div>
+                        <h1>Audit Log Report</h1>
+                        <p>${escapeHtml(auditLogReport.system_name)}</p>
+                    </div>
+                </div>
+                <div class="report-document-meta">
+                    <p><span>Generated on:</span> ${escapeHtml(auditLogReport.generated_at)}</p>
+                    <p><span>Generated by:</span> ${escapeHtml(auditLogReport.generated_by)}</p>
+                    <p><span>System:</span> ${escapeHtml(auditLogReport.system_name)}</p>
+                </div>
+            </div>
+
+            <div class="report-document-summary">
+                <div class="report-document-summary-card">
+                    <small>Total Records</small>
+                    <strong>${escapeHtml(auditLogReport.total_records)}</strong>
+                </div>
+                <div class="report-document-summary-card">
+                    <small>Active Filters</small>
+                    <strong>${escapeHtml(auditLogReport.active_filters.length)}</strong>
+                </div>
+                <div class="report-document-summary-card">
+                    <small>Filter Scope</small>
+                    <strong>${escapeHtml(filterSummary)}</strong>
+                </div>
+            </div>
+
+            ${buildAuditLogTableMarkup()}
+
+            <div class="report-document-footer">
+                Generated by ${escapeHtml(auditLogReport.system_name)}. This document reflects the audit log data available at the time of report generation.
+            </div>
+        </div>
+    `;
+}
+
+function printAuditLogReport() {
+    if (!auditLogRows || auditLogRows.length === 0) {
+        alert('No data to print.');
+        return;
+    }
+
+    const printWindow = window.open('', '', 'height=700,width=1200');
+    if (!printWindow) {
+        alert('Unable to open the print preview window. Please allow pop-ups and try again.');
+        return;
+    }
+
+    const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Audit Log Report - Print View</title>
+            ${getAuditLogPrintStyles()}
+        </head>
+        <body>
+            ${buildAuditLogDocumentMarkup()}
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    setTimeout(() => {
+        printWindow.print();
+    }, 250);
+}
+
 $(document).ready(function () {
     const auditTable = $('#auditTable').DataTable({
         pageLength: 10,

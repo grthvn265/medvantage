@@ -26,6 +26,7 @@ $db = (string) ($config['db']['name'] ?? '');
 $user = (string) ($config['db']['user'] ?? '');
 $pass = (string) ($config['db']['pass'] ?? '');
 $charset = (string) ($config['db']['charset'] ?? 'utf8mb4');
+$dbTimezone = (string) ($config['db']['timezone'] ?? '+08:00');
 
 if ($db === '' || $user === '') {
     error_log('Database configuration is incomplete. Check DB_NAME and DB_USER.');
@@ -47,6 +48,13 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+
+    if (!preg_match('/^[+\-](0\d|1[0-3]):[0-5]\d$|^14:00$/', $dbTimezone)) {
+        $dbTimezone = '+08:00';
+    }
+
+    $timezoneStmt = $pdo->prepare('SET time_zone = ?');
+    $timezoneStmt->execute([$dbTimezone]);
 
     if (PHP_SAPI !== 'cli' && is_callable('requireCurrentRouteAccess')) {
         requireCurrentRouteAccess($pdo);
