@@ -13,11 +13,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'log_
         exit;
     }
 
+    $userId = (int) ($reportUser['user_id'] ?? 0);
+    if ($userId <= 0) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Invalid session user']);
+        exit;
+    }
+
     $description = isset($_POST['description']) && trim((string) $_POST['description']) !== ''
         ? trim((string) $_POST['description'])
         : 'Printed dashboard report';
 
-    logAudit($pdo, 'PRINT', 'dashboard', null, $description);
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
+        ?? $_SERVER['REMOTE_ADDR']
+        ?? null;
+
+    if (is_string($ip) && str_contains($ip, ',')) {
+        $ip = trim(explode(',', $ip)[0]);
+    }
+
+    if (is_string($ip) && strlen($ip) > 45) {
+        $ip = substr($ip, 0, 45);
+    }
+
+    try {
+        $stmt = $pdo->prepare('INSERT INTO audit_logs (user_id, action, module, entity_id, description, ip_address) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$userId, 'PRINT', 'dashboard', null, $description, $ip]);
+    } catch (Throwable $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to write print audit log',
+            'error' => $e->getMessage(),
+        ]);
+        exit;
+    }
+
     echo json_encode(['success' => true]);
     exit;
 }
@@ -1085,12 +1116,7 @@ $reportSystemName = 'MedVantage';
         URL.revokeObjectURL(url);
     }
 
-    async function printReport() {
-        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
-            alert('No data to print. Generate a report first.');
-            return;
-        }
-
+    async function logDashboardPrintAction() {
         const printLogEndpoint = "<?= htmlspecialchars(appUrl('/modules/dashboard/index.php')) ?>";
         const printLogPayload = new URLSearchParams({
             action: 'log_print',
@@ -1127,6 +1153,13 @@ $reportSystemName = 'MedVantage';
         } catch (error) {
             console.error('Network error while logging dashboard print action', error);
         }
+    }
+
+    async function printReport() {
+        if (!currentReportData || !currentReportData.data || currentReportData.data.length === 0) {
+            alert('No data to print. Generate a report first.');
+            return;
+        }
 
         const printWindow = window.open('', '', 'height=700,width=1200');
         if (!printWindow) {
@@ -1144,16 +1177,31 @@ $reportSystemName = 'MedVantage';
             </head>
             <body>
                 ${buildReportDocumentMarkup()}
+                <script>
+                    window.addEventListener('afterprint', async function () {
+                        try {
+                            if (window.opener && typeof window.opener.logDashboardPrintAction === 'function') {
+                                await window.opener.logDashboardPrintAction();
+                            }
+                        } catch (error) {
+                            console.error('Failed to log dashboard print action from print view', error);
+                        } finally {
+                            window.close();
+                        }
+                    });
+
+                    window.addEventListener('load', function () {
+                        setTimeout(function () {
+                            window.print();
+                        }, 250);
+                    });
+                <\/script>
             </body>
             </html>
         `;
 
         printWindow.document.write(printContent);
         printWindow.document.close();
-
-        setTimeout(() => {
-            printWindow.print();
-        }, 250);
     }
 
 </script>
